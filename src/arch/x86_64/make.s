@@ -5,24 +5,29 @@ liteco_internal_context_make = __make_context;
 .align 2;
 .type __make_context, @function;
 __make_context:
-    movq 264(%rdi), %rbx                ; // ctx.stack.stack_pointer 264(%rdi)
-    addq 272(%rdi), %rbx                ; // ctx.stack.stack_pointer.stack_size 272(%rdi)
-                                        ; // find coroutine stack pointer
-    subq $8, %rbx
-    andq $0xfffffffffffffff0, %rbx
-    subq $8, %rbx
+/* rdi (ctx), rsi (stack), rdx (size), rcx(func), r8(arg) */
 
-    movq %rsi, 136(%rdi)                ; // register RIP set func_ptr
-    movq %rbx, %rax
+    movq %rcx, 136(%rdi)                ; /* 将函数指针存入到context的起始函数的位置 */
+
+    movq %rsi, %rax                     ; /* 设置栈，将栈空间的基址存入rax寄存器中 */
+    addq %rdx, %rax                     ; /* 计算出栈顶指针所指向的内存地址 */
+
+                                        ; /* 对齐栈顶指针 */
+    subq $8, %rax
+    andq $0xfffffffffffffff0, %rax
+    subq $8, %rax
+
     addq $8, %rax
-    movq %rax, 96(%rdi)                 ; // register RBX set stack_pointer[8]
-    movq %rbx, 128(%rdi)                ; // register RSP set stack_pointer
+    movq %rax, 96(%rdi)                 ; /* 将该上下文的基址地址存储到context的RBX的位置 */
+    subq $8, %rax
+    movq %rax, 128(%rdi)                ; /* 将该上下文的栈顶指针存储到context的RSP的位置 */
+    movq $__end_context, (%rax)         ; /* 将__end_context(上下文执行完毕后的收尾函数)的函数地址入协程栈 */
+    movq (%rdi), %r9
+    movq %r9, 8(%rax)                   ; /* 将关联context存入到协程栈栈底（为方便__end_context调取） */
+                                        ; /* 此时假设SP为0，则内存分布如下： */
+                                        ; /* SP(0): stored __end_context, RBX(8) stored context */
 
-    movq $__end_context, (%rbx)         ; // put __end_context at bottom of stack
-    movq (%rdi), %rax
-    movq %rax, 8(%rbx)                  ; // put ctx.stack.link at bottom of stack
-
-    movq %rdx, 72(%rdi)                 ; // put args
+    movq %r8, 72(%rdi)                  ; /* 将arg存入context中的RDI的位置 */
 
     xorl %eax, %eax
     ret

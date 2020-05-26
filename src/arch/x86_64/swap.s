@@ -5,7 +5,7 @@ liteco_internal_context_swap = __swap_context;
 .align 2;
 .type __swap_context, @function;
 __swap_context:
-    /* save current context */
+    /* 存储当前协程上下文 */
     movq %r8, 8(%rdi)
     movq %r9, 16(%rdi)
     movq %r10, 24(%rdi)
@@ -28,7 +28,7 @@ __swap_context:
     leaq 8(%rsp), %rcx
     movq %rcx, 128(%rdi)
 
-    /* recover their context */
+    /* 恢复目标协程上下文 */
     movq 8(%rsi), %r8
     movq 16(%rsi), %r9
     movq 24(%rsi), %r10
@@ -45,6 +45,7 @@ __swap_context:
     movq 120(%rsi), %rcx
     movq 128(%rsi), %rsp
 
+    /* 等同于调用context中对应的回调函数 */
     pushq 136(%rsi)
 
     movq 80(%rsi), %rsi

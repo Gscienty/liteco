@@ -2,6 +2,10 @@
 .align 2;
 .type __end_context, @function;
 __end_context:
+    ; /* 当协程执行完毕后，需执行在make context时铺设好的收尾工作 */
+    ; /* 收尾工作需要现context中的link */
+    ; /* 由于RSP指向的时当前协程的context，而context结构体的起始位置为link */
+    ; /* 即当前RSP指向的内存空间内存储的值，即时link context的地址 */
     movq %rbx, %rsp
     movq (%rsp), %rdi
     testq %rdi, %rdi
