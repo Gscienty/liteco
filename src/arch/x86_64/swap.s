@@ -1,54 +1,56 @@
-.weak liteco_swap_context;
-liteco_swap_context = __swap_func;
+.weak liteco_internal_context_swap;
+liteco_internal_context_swap = __swap_context;
 
-.global __swap_func;
+.global __swap_context;
 .align 2;
-.type __swap_func, @function;
-__swap_func:
+.type __swap_context, @function;
+__swap_context:
     /* save current context */
-    movq %r8,    8(%rdi)    ; // R8  save to context
-    movq %r9,   16(%rdi)    ; // R9  save to context
-    movq %r10,  24(%rdi)    ; // R10 save to context
-    movq %r11,  32(%rdi)    ; // R11 save to context
-    movq %r12,  40(%rdi)    ; // R12 save to context
-    movq %r13,  48(%rdi)    ; // R13 save to context
-    movq %r14,  56(%rdi)    ; // R14 save to context
-    movq %r15,  64(%rdi)    ; // R15 save to context
-    movq %rdi,  72(%rdi)    ; // RDI save to context
-    movq %rsi,  80(%rdi)    ; // RSI save to context
-    movq %rbp,  88(%rdi)    ; // RBP save to context
-    movq %rbx,  96(%rdi)    ; // RBX save to context
-    movq %rdx, 104(%rdi)    ; // RDX save to context
-    movq $1,   112(%rdi)    ; // ARG save to context
-    movq %rcx, 120(%rdi)    ; // RCX save to context
+    movq %r8, 8(%rdi)
+    movq %r9, 16(%rdi)
+    movq %r10, 24(%rdi)
+    movq %r11, 32(%rdi)
+    movq %r12, 40(%rdi)
+    movq %r13, 48(%rdi)
+    movq %r14, 56(%rdi)
+    movq %r15, 64(%rdi)
+    movq %rdi, 72(%rdi)
+    movq %rsi, 80(%rdi)
+    movq %rbp, 88(%rdi)
+    movq %rbx, 96(%rdi)
+    movq %rdx, 104(%rdi)
+    movq $1, 112(%rdi)
+    movq %rcx, 120(%rdi)
 
     movq (%rsp), %rcx
-    movq %rcx, 128(%rdi)    ; // FPTR save to context
+    movq %rcx, 136(%rdi)
 
     leaq 8(%rsp), %rcx
-    movq %rcx, (%rdi)       ; // SP save to context
+    movq %rcx, 128(%rdi)
 
     /* recover their context */
-    movq    (%rsi) , %rsp       ; // RSP recover from context
-    movq   8(%rsi) , %r8        ; // R8  recover from context
-    movq  16(%rsi) , %r9        ; // R9  recover from context
-    movq  24(%rsi) , %r10       ; // R10 recover from context
-    movq  32(%rsi) , %r11       ; // R12 recover from context
-    movq  40(%rsi) , %r12       ; // R13 recover from context
-    movq  56(%rsi) , %r14       ; // R14 recover from context
-    movq  64(%rsi) , %r15       ; // R15 recover from context
-    movq  72(%rsi) , %rdi       ; // RDI recover from context
-    movq  88(%rsi) , %rbp       ; // RBP recover from context
-    movq  96(%rsi) , %rbx       ; // RBX recover from context
-    movq  104(%rsi), %rdx       ; // RDX recover from context
-    movq  112(%rsi), %rax       ; // RAX recover from context
-    movq  120(%rsi), %rcx       ; // RCX recover from context
+    movq 8(%rsi), %r8
+    movq 16(%rsi), %r9
+    movq 24(%rsi), %r10
+    movq 32(%rsi), %r11
+    movq 40(%rsi), %r12
+    movq 48(%rsi), %r13
+    movq 56(%rsi), %r14
+    movq 64(%rsi), %r15
+    movq 72(%rsi), %rdi
+    movq 88(%rsi), %rbp
+    movq 96(%rsi), %rbx
+    movq 104(%rsi), %rdx
+    movq 112(%rsi), %rax
+    movq 120(%rsi), %rcx
+    movq 128(%rsi), %rsp
 
-    pushq 120(%rsi)             ; // FPTR recover from context
+    pushq 136(%rsi)
 
-    movq  80(%rsi) , %rsi       ; // RSI recover from context
-
+    movq 80(%rsi), %rsi
+    
     xorl %eax, %eax
     ret
-.end __swap_func;
-.size __swap_func,.-__swap_func;
+
+.end __swap_context;
+.size __swap_context,.-__swap_context;

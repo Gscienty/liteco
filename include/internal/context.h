@@ -1,12 +1,21 @@
 #ifndef __LITECO_INTERNAL_CONTEXT_H__
 #define __LITECO_INTERNAL_CONTEXT_H__
 
-struct liteco_context {
-    /**
-     * SP(0)   | R8(8)   | R9(16)   | R10(24)   | R11(32)  | R12(40)   | R13(48) | R14(56) | R15(64) | RDI(72) | RSI(80)
-     * RBP(88) | RBX(96) | RDX(104) | ARGS(112) | RCX(120) | FPTR(128) |
-     */
-    void *regs[32];
-};
+#include <sys/types.h>
+
+struct liteco_internal_stack {
+    void *stack_pointer;
+    u_int64_t stack_size;
+} __attribute__((packed));
+
+struct liteco_internal_context {
+    struct liteco_internal_context *link;
+    u_int8_t regs[256];
+    struct liteco_internal_stack stack;
+} __attribute__((packed));
+
+int liteco_internal_context_current(struct liteco_internal_context *const ctx);
+int liteco_internal_context_swap(struct liteco_internal_context *const from, struct liteco_internal_context *const to);
+int liteco_internal_context_make(struct liteco_internal_context *const ctx, int (*fn) (void *const), void *const args);
 
 #endif
