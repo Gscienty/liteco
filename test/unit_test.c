@@ -16,9 +16,17 @@ char stack[128 * 1024];
 int main() {
     liteco_coroutine_t co;
     liteco_create(&co, stack, 128 * 1024, func, NULL);
-    printf("1\n");
-    liteco_resume(&co);
-    printf("3\n");
-    liteco_resume(&co);
+    liteco_schedule_t sche;
+    liteco_schedule_init(&sche);
+
+    liteco_schedule_join(&sche, &co);
+
+    liteco_coroutine_t *cur;
+    liteco_schedule_pop(&cur, &sche);
+    liteco_resume(cur);
+
+    liteco_schedule_join(&sche, cur);
+    liteco_schedule_pop(&cur, &sche);
+    liteco_resume(cur);
     return 0;
 }

@@ -21,6 +21,7 @@ int liteco_create(liteco_coroutine_t *const co, void *const stack, size_t st_siz
     co->args = args;
     co->status = LITECO_STARTING;
     co->link = (liteco_internal_context_t **) ((((unsigned long) (stack + st_size) - 8) & 0xfffffffffffffff0));
+    co->sche = NULL;
     liteco_internal_context_make(&co->context, stack, st_size, liteco_callback, co);
 
     return LITECO_SUCCESS;
