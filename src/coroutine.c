@@ -13,7 +13,7 @@ int liteco_status(const liteco_coroutine_t *const co) {
     return co->status;
 }
 
-int liteco_create(liteco_coroutine_t *const co, void *const stack, size_t st_size, int (*fn) (__co__, void *const), void *const args) {
+int liteco_create(liteco_coroutine_t *const co, void *const stack, size_t st_size, int (*fn) (liteco_coroutine_t *const, void *const), void *const args) {
     if (co == NULL || stack == NULL || fn == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }

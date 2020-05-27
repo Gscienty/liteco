@@ -2,11 +2,11 @@
 #include <stdio.h>
 #include <malloc.h>
 
-int func(__co__, void *const _) {
+int func(liteco_coroutine_t *const co, void *const _) {
     (void) _;
 
     printf("2\n");
-    __yield__;
+    liteco_yield(co);
     printf("4\n");
 
     return 0;
