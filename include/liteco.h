@@ -9,7 +9,7 @@ typedef struct liteco_coroutine_s liteco_coroutine_t;
 struct liteco_coroutine_s {
     liteco_internal_context_t context;
     int status;
-    liteco_internal_context_t **swap_link;
+    liteco_internal_context_t **link;
 
     int (*fn) (liteco_coroutine_t *const, void *const);
     void *args;
@@ -30,6 +30,5 @@ int liteco_status(const liteco_coroutine_t *const co);
 int liteco_create(liteco_coroutine_t *const co, void *const stack, size_t st_size, int (*fn) (liteco_coroutine_t *const, void *const), void *const args);
 int liteco_resume(liteco_coroutine_t *const co);
 int liteco_yield(liteco_coroutine_t *const co);
-
 
 #endif

@@ -20,7 +20,7 @@ int liteco_create(liteco_coroutine_t *const co, void *const stack, size_t st_siz
     co->fn = fn;
     co->args = args;
     co->status = LITECO_STARTING;
-    co->swap_link = (liteco_internal_context_t **) ((((unsigned long) (stack + st_size) - 8) & 0xfffffffffffffff0));
+    co->link = (liteco_internal_context_t **) ((((unsigned long) (stack + st_size) - 8) & 0xfffffffffffffff0));
     liteco_internal_context_make(&co->context, stack, st_size, liteco_callback, co);
 
     return LITECO_SUCCESS;
@@ -35,7 +35,7 @@ int liteco_resume(liteco_coroutine_t *const co) {
     case LITECO_TERMINATE:
         return LITECO_SUCCESS;
     }
-    *co->swap_link = &this_context;
+    *co->link = &this_context;
     liteco_internal_context_swap(&this_context, &co->context);
 
     return LITECO_SUCCESS;
@@ -46,7 +46,7 @@ int liteco_yield(liteco_coroutine_t *const co) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
     co->status = LITECO_READYING;
-    liteco_internal_context_swap(&co->context, *co->swap_link);
+    liteco_internal_context_swap(&co->context, *co->link);
 
     return LITECO_SUCCESS;
 }
