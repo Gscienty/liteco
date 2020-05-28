@@ -1,59 +1,43 @@
 #include "liteco.h"
 #include <malloc.h>
 
+extern int liteco_link_init(liteco_link_t *const link);
+extern int liteco_link_push(liteco_link_t *const link, void *const value);
+extern int liteco_link_pop(void **const value, liteco_link_t *const link);
+extern int liteco_link_empty(liteco_link_t *const link);
+
 int liteco_schedule_init(liteco_schedule_t *const sche) {
     if (sche == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
-    sche->queue.co = NULL;
-    sche->queue.next = &sche->queue;
-    sche->q_tail = &sche->queue;
+    liteco_link_init(&sche->link);
 
     return LITECO_SUCCESS;
 }
 
 int liteco_schedule_join(liteco_schedule_t *const sche, liteco_coroutine_t *const co) {
-    liteco_link_node_t *node = NULL;
     if (sche == NULL || co == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
     if (co->sche != NULL) {
         return LITECO_COROUTINE_JOINED;
     }
-    if ((node = malloc(sizeof(*node))) == NULL) {
-        return LITECO_INTERNAL_ERROR;
-    }
-    sche->q_tail->next = node;
-    sche->q_tail = node;
-    node->next = &sche->queue;
-    node->co = co;
     co->sche = sche;
+    return liteco_link_push(&sche->link, co);
 
     return LITECO_SUCCESS;
 }
 
 int liteco_schedule_pop(liteco_coroutine_t **const co, liteco_schedule_t *const sche) {
-    liteco_link_node_t *node = NULL;
     if (co == NULL || sche == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
-    if (&sche->queue == sche->q_tail) {
-        return LITECO_SCHEDULE_EMPTY;
-    }
-    node = sche->queue.next;
-    sche->queue.next = node->next;
-    if (node == sche->q_tail) {
-        sche->q_tail = &sche->queue;
-    }
-    *co = node->co;
-    free(node);
-
-    return LITECO_SUCCESS;
+    return liteco_link_pop((void **) co, &sche->link);
 }
 
-int liteco_schedule_empty(liteco_schedule_t *const sche) {
+liteco_boolean_t liteco_schedule_empty(liteco_schedule_t *const sche) {
     if (sche == NULL) {
-        return 1;
+        return LITECO_TRUE;
     }
-    return &sche->queue == sche->q_tail;
+    return liteco_link_empty(&sche->link);
 }
