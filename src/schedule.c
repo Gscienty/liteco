@@ -11,33 +11,48 @@ int liteco_schedule_init(liteco_schedule_t *const sche) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
     liteco_link_init(&sche->link);
+    pthread_mutex_init(&sche->mutex, NULL);
 
     return LITECO_SUCCESS;
 }
 
 int liteco_schedule_join(liteco_schedule_t *const sche, liteco_coroutine_t *const co) {
-    if (sche == NULL || co == NULL) {
+    if (sche == NULL || co == NULL || co->status == LITECO_TERMINATE) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
+    pthread_mutex_lock(&co->mutex);
     if (co->sche != NULL) {
+        pthread_mutex_unlock(&co->mutex);
         return LITECO_COROUTINE_JOINED;
     }
     co->sche = sche;
-    return liteco_link_push(&sche->link, co);
+    pthread_mutex_unlock(&co->mutex);
 
-    return LITECO_SUCCESS;
+    pthread_mutex_lock(&sche->mutex);
+    int result = liteco_link_push(&sche->link, co);
+    pthread_mutex_unlock(&sche->mutex);
+
+    return result;
 }
 
 int liteco_schedule_pop(liteco_coroutine_t **const co, liteco_schedule_t *const sche) {
     if (co == NULL || sche == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
-    return liteco_link_pop((void **) co, &sche->link);
+    pthread_mutex_lock(&sche->mutex);
+    int result = liteco_link_pop((void **) co, &sche->link);
+    pthread_mutex_unlock(&sche->mutex);
+
+    return result;
 }
 
 liteco_boolean_t liteco_schedule_empty(liteco_schedule_t *const sche) {
     if (sche == NULL) {
         return LITECO_TRUE;
     }
-    return liteco_link_empty(&sche->link);
+    pthread_mutex_lock(&sche->mutex);
+    liteco_boolean_t result = liteco_link_empty(&sche->link);
+    pthread_mutex_unlock(&sche->mutex);
+
+    return result;
 }

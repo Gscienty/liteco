@@ -2,8 +2,10 @@
 #define __LITECO_H__
 
 #include <stddef.h>
+#include <pthread.h>
 
 typedef char liteco_internal_context_t[256];
+typedef int liteco_boolean_t;
 
 typedef struct liteco_link_node_s liteco_link_node_t;
 typedef struct liteco_link_s liteco_link_t;
@@ -15,10 +17,14 @@ struct liteco_coroutine_s {
     liteco_internal_context_t context;
     int status;
     liteco_internal_context_t **link;
-    liteco_schedule_t *sche;
 
     int (*fn) (liteco_coroutine_t *const, void *const);
     void *args;
+
+    liteco_schedule_t *sche;
+    int channel;
+
+    pthread_mutex_t mutex;
 };
 
 #define LITECO_PARAMETER_UNEXCEPTION    -1
@@ -35,15 +41,14 @@ struct liteco_coroutine_s {
 #define LITECO_WAITING      0x04
 #define LITECO_TERMINATE    0x05
 
-typedef int liteco_boolean_t;
 #define LITECO_TRUE     1
-#define LITECO_FALSE    2
+#define LITECO_FALSE    0
 
 
-int liteco_status(const liteco_coroutine_t *const co);
 int liteco_create(liteco_coroutine_t *const co, void *const stack, size_t st_size, int (*fn) (liteco_coroutine_t *const, void *const), void *const args);
 int liteco_resume(liteco_coroutine_t *const co);
 int liteco_yield(liteco_coroutine_t *const co);
+int liteco_kill(liteco_coroutine_t *const co);
 
 struct liteco_link_node_s {
     liteco_link_node_t *next;
@@ -57,6 +62,8 @@ struct liteco_link_s {
 
 struct liteco_schedule_s {
     liteco_link_t link;
+
+    pthread_mutex_t mutex;
 };
 
 int liteco_schedule_init(liteco_schedule_t *const sche);
@@ -68,6 +75,8 @@ struct liteco_channel_s {
     liteco_boolean_t closed;
     liteco_link_t events;
     liteco_link_t waiting_co;
+
+    pthread_mutex_t mutex;
 };
 
 int liteco_channel_init(liteco_channel_t *const channel);
