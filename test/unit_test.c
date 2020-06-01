@@ -41,5 +41,7 @@ int main() {
 
     liteco_g_resume_until_terminate_st(consumer_co);
 
+    printf("%d\n", consumer_co->ref_count);
+
     return 0;
 }

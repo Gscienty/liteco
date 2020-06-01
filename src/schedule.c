@@ -55,6 +55,7 @@ int liteco_schedule_pop(liteco_coroutine_t **const co, liteco_schedule_t *const 
         return result;
     }
     (*co)->sche = NULL;
+    (*co)->ref_count--;
     pthread_mutex_unlock(&sche->mutex);
 
     return result;
