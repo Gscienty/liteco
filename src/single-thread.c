@@ -9,6 +9,8 @@ static pthread_cond_t __LITECO_SCHE_COND_ST__;
 
 static int liteco_g_coroutine_release(void *const stack, const size_t st_size);
 
+extern int liteco_coroutine_set_status(liteco_coroutine_t *const co, int status);
+
 static inline int __liteco_g_init__() {
     if (__LITECO_SCHE_ST_INITED__ == LITECO_FALSE) {
         liteco_schedule_init(&__LITECO_SCHE_ST__);
@@ -67,6 +69,9 @@ int liteco_g_publish_st(liteco_channel_t *const channel, void *const event) {
     liteco_channel_publish(channel, event);
     liteco_channel_pop(&co, channel);
     if (co != NULL) {
+        pthread_mutex_lock(&co->mutex);
+        liteco_coroutine_set_status(co, LITECO_READYING);
+        pthread_mutex_unlock(&co->mutex);
         liteco_schedule_join(&__LITECO_SCHE_ST__, co);
         pthread_cond_signal(&__LITECO_SCHE_COND_ST__);
     }
@@ -90,7 +95,7 @@ int liteco_g_resume_st() {
         liteco_release(co);
         break;
     case LITECO_RUNNING:
-        co->status = LITECO_READYING;
+        liteco_coroutine_set_status(co, LITECO_READYING);
         liteco_schedule_join(&__LITECO_SCHE_ST__, co);
         pthread_cond_signal(&__LITECO_SCHE_COND_ST__);
         break;
@@ -129,7 +134,7 @@ int liteco_g_resume_until_terminate_st(liteco_coroutine_t *const target_co) {
         case LITECO_STARTING:
         case LITECO_READYING:
         case LITECO_RUNNING:
-            co->status = LITECO_READYING;
+            liteco_coroutine_set_status(co, LITECO_READYING);
             liteco_schedule_join(&__LITECO_SCHE_ST__, co);
             pthread_cond_signal(&__LITECO_SCHE_COND_ST__);
             break;
@@ -146,7 +151,7 @@ int liteco_g_yield(liteco_coroutine_t *const co) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
 
-    co->status = LITECO_READYING;
+    liteco_coroutine_set_status(co, LITECO_READYING);
     liteco_schedule_join(&__LITECO_SCHE_ST__, co);
     pthread_cond_signal(&__LITECO_SCHE_COND_ST__);
 

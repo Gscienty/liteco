@@ -29,6 +29,17 @@ int liteco_create(liteco_coroutine_t *const co,
     return LITECO_SUCCESS;
 }
 
+int liteco_coroutine_set_status(liteco_coroutine_t *const co, int status) {
+    if (co == NULL) {
+        return LITECO_PARAMETER_UNEXCEPTION;
+    }
+    pthread_mutex_lock(&co->mutex);
+    co->status = status;
+    pthread_mutex_unlock(&co->mutex);
+
+    return LITECO_SUCCESS;
+}
+
 int liteco_resume(liteco_coroutine_t *const co) {
     liteco_internal_context_t this_context;
     if (co == NULL) {

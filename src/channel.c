@@ -1,5 +1,6 @@
 #include "liteco.h"
 #include <stdarg.h>
+#include <stdio.h>
 
 extern int liteco_link_init(liteco_link_t *const link);
 extern int liteco_link_push(liteco_link_t *const link, void *const value);
@@ -52,9 +53,7 @@ int liteco_channel_subscribe(void **const event, liteco_channel_t **const channe
                 break;
             }
 
-            pthread_mutex_lock(&co->mutex);
             co->status = LITECO_WAITING;
-            pthread_mutex_unlock(&co->mutex);
 
             liteco_schedule_join(&cand_channel->waiting_co, co);
             pthread_mutex_unlock(&cand_channel->mutex);
