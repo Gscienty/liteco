@@ -55,7 +55,7 @@ int liteco_create(liteco_coroutine_t *const co,
                   int (*release) (void *const, const size_t));
 int liteco_resume(liteco_coroutine_t *const co);
 int liteco_yield(liteco_coroutine_t *const co);
-int liteco_kill(liteco_coroutine_t *const co);
+int liteco_release(liteco_coroutine_t *const co);
 
 struct liteco_link_node_s {
     liteco_link_node_t *next;
@@ -93,5 +93,11 @@ int liteco_channel_publish(liteco_channel_t *const channel, void *const event);
 int liteco_channel_pop(liteco_coroutine_t **const co, liteco_channel_t *const channel);
 
 extern liteco_channel_t __LITECO_CLOSED_CHANNEL__;
+
+int liteco_g_create_st(liteco_coroutine_t **const result_co, int (*fn) (liteco_coroutine_t *const, void *const), void *const args);
+int liteco_g_publish_st(liteco_channel_t *const channel, void *const event);
+int liteco_g_resume_st();
+int liteco_g_resume_until_terminate_st(liteco_coroutine_t *const co);
+int liteco_g_yield(liteco_coroutine_t *const co);
 
 #endif

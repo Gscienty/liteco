@@ -33,6 +33,7 @@ int liteco_link_pop(void **const value, liteco_link_t *const link) {
     if (value == NULL || link == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
+    *value = NULL;
     if (link->q_tail == &link->head) {
         return LITECO_EMPTY;
     }

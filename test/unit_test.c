@@ -1,32 +1,32 @@
 #include "liteco.h"
 #include <stdio.h>
-#include <malloc.h>
 
-int func(liteco_coroutine_t *const co, void *const _) {
-    (void) _;
+int consumer(liteco_coroutine_t *const co, void *const args) {
+    (void) args;
 
-    printf("2\n");
-    liteco_yield(co);
-    printf("4\n");
+    printf("consumer 1\n");
+    liteco_g_yield(co);
+    printf("consumer 2\n");
 
-    return 0;
+    return LITECO_SUCCESS;
 }
 
-char stack[128 * 1024];
+int productor(liteco_coroutine_t *const co, void *const args) {
+    (void) args;
+
+    printf("productor 1\n");
+    liteco_g_yield(co);
+    printf("productor 2\n");
+
+    return LITECO_SUCCESS;
+}
+
 int main() {
-    liteco_coroutine_t co;
-    liteco_create(&co, stack, 128 * 1024, func, NULL);
-    liteco_schedule_t sche;
-    liteco_schedule_init(&sche);
+    liteco_coroutine_t *consumer_co = NULL;
+    liteco_g_create_st(&consumer_co, consumer, NULL);
+    liteco_g_create_st(NULL, productor, NULL);
 
-    liteco_schedule_join(&sche, &co);
+    liteco_g_resume_until_terminate_st(consumer_co);
 
-    liteco_coroutine_t *cur;
-    liteco_schedule_pop(&cur, &sche);
-    liteco_resume(cur);
-
-    liteco_schedule_join(&sche, cur);
-    liteco_schedule_pop(&cur, &sche);
-    liteco_resume(cur);
     return 0;
 }

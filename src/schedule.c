@@ -28,6 +28,13 @@ int liteco_schedule_join(liteco_schedule_t *const sche, liteco_coroutine_t *cons
     }
     co->sche = sche;
     co->ref_count++;
+    if (co->status != LITECO_WAITING && co->status != LITECO_TERMINATE) {
+        co->status = LITECO_READYING;
+    }
+    if (co->status == LITECO_TERMINATE) {
+        pthread_mutex_unlock(&co->mutex);
+        return LITECO_CLOSED;
+    }
     pthread_mutex_unlock(&co->mutex);
 
     pthread_mutex_lock(&sche->mutex);
@@ -43,6 +50,10 @@ int liteco_schedule_pop(liteco_coroutine_t **const co, liteco_schedule_t *const 
     }
     pthread_mutex_lock(&sche->mutex);
     int result = liteco_link_pop((void **) co, &sche->link);
+    if (*co == NULL) {
+        pthread_mutex_unlock(&sche->mutex);
+        return result;
+    }
     (*co)->sche = NULL;
     pthread_mutex_unlock(&sche->mutex);
 

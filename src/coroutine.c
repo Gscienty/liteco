@@ -37,9 +37,9 @@ int liteco_resume(liteco_coroutine_t *const co) {
     pthread_mutex_lock(&co->mutex);
     if (co->status == LITECO_TERMINATE) {
         pthread_mutex_unlock(&co->mutex);
-        return liteco_kill(co);
+        return LITECO_SUCCESS;
     }
-    if (*co->link != NULL) {
+    if (co->status == LITECO_RUNNING) {
         pthread_mutex_unlock(&co->mutex);
         return LITECO_SUCCESS;
     }
@@ -58,19 +58,16 @@ int liteco_yield(liteco_coroutine_t *const co) {
     }
 
     pthread_mutex_lock(&co->mutex);
-    if (co->status != LITECO_RUNNING) {
-        pthread_mutex_unlock(&co->mutex);
-        return LITECO_INTERNAL_ERROR;
+    if (co->status == LITECO_RUNNING) {
+        co->status = LITECO_READYING;
     }
-    co->status = LITECO_READYING;
-    *co->link = NULL;
     pthread_mutex_unlock(&co->mutex);
 
     liteco_internal_context_swap(&co->context, *co->link);
     return LITECO_SUCCESS;
 }
 
-int liteco_kill(liteco_coroutine_t *const co) {
+int liteco_release(liteco_coroutine_t *const co) {
     if (co == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
@@ -92,6 +89,8 @@ static int liteco_callback(void *const co_) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
     co->fn(co, co->args);
-    liteco_kill(co);
+    pthread_mutex_lock(&co->mutex);
+    co->status = LITECO_TERMINATE;
+    pthread_mutex_unlock(&co->mutex);
     return LITECO_SUCCESS;
 }
