@@ -14,7 +14,7 @@ int liteco_channel_init(liteco_channel_t *const channel) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
     channel->closed = LITECO_FALSE;
-    liteco_link_init(&channel->waiting_co);
+    liteco_schedule_init(&channel->waiting_co);
     liteco_link_init(&channel->events);
     pthread_mutex_init(&channel->mutex, NULL);
 
@@ -54,10 +54,9 @@ int liteco_channel_subscribe(void **const event, liteco_channel_t **const channe
 
             pthread_mutex_lock(&co->mutex);
             co->status = LITECO_WAITING;
-            co->channel++;
             pthread_mutex_unlock(&co->mutex);
 
-            liteco_link_push(&cand_channel->waiting_co, co);
+            liteco_schedule_join(&cand_channel->waiting_co, co);
             pthread_mutex_unlock(&cand_channel->mutex);
         }
         va_end(channels);
@@ -75,10 +74,7 @@ int liteco_channel_subscribe(void **const event, liteco_channel_t **const channe
                 pthread_mutex_unlock(&cand_channel->mutex);
                 continue;
             }
-
-            pthread_mutex_lock(&co->mutex);
-            co->channel -= liteco_link_remove_spec(&cand_channel->waiting_co, co);
-            pthread_mutex_unlock(&co->mutex);
+            liteco_schedule_remove_spec(&cand_channel->waiting_co, co);
             pthread_mutex_unlock(&cand_channel->mutex);
         }
         va_end(channels);
@@ -91,22 +87,24 @@ int liteco_channel_subscribe(void **const event, liteco_channel_t **const channe
     return LITECO_SUCCESS;
 }
 
-int liteco_channel_publish(liteco_coroutine_t **const co, liteco_channel_t *const channel, void *const event) {
-    if (co == NULL || channel == NULL || event == NULL) {
+int liteco_channel_publish(liteco_channel_t *const channel, void *const event) {
+    if (channel == NULL || event == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
-    *co = NULL;
     pthread_mutex_lock(&channel->mutex);
     if (channel->closed) {
         pthread_mutex_unlock(&channel->mutex);
         return LITECO_CLOSED;
     }
     liteco_link_push(&channel->events, event);
-    if (liteco_link_empty(&channel->waiting_co)) {
-        pthread_mutex_unlock(&channel->mutex);
-        return LITECO_SUCCESS;
-    }
-    int result = liteco_link_pop((void **) co, &channel->waiting_co);
     pthread_mutex_unlock(&channel->mutex);
-    return result;
+    return LITECO_SUCCESS;
+}
+
+int liteco_channel_pop(liteco_coroutine_t **const co, liteco_channel_t *const channel) {
+    if (co == NULL || channel == NULL) {
+        return LITECO_PARAMETER_UNEXCEPTION;
+    }
+
+    return liteco_schedule_pop(co, &channel->waiting_co);
 }

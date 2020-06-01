@@ -20,11 +20,15 @@ struct liteco_coroutine_s {
 
     int (*fn) (liteco_coroutine_t *const, void *const);
     void *args;
+    int (*release) (void *const, const size_t);
+    size_t st_size;
+    void *stack;
 
     liteco_schedule_t *sche;
-    int channel;
 
     pthread_mutex_t mutex;
+
+    int ref_count;
 };
 
 #define LITECO_PARAMETER_UNEXCEPTION    -1
@@ -45,7 +49,10 @@ struct liteco_coroutine_s {
 #define LITECO_FALSE    0
 
 
-int liteco_create(liteco_coroutine_t *const co, void *const stack, size_t st_size, int (*fn) (liteco_coroutine_t *const, void *const), void *const args);
+int liteco_create(liteco_coroutine_t *const co,
+                  void *const stack, const size_t st_size,
+                  int (*fn) (liteco_coroutine_t *const, void *const), void *const args,
+                  int (*release) (void *const, const size_t));
 int liteco_resume(liteco_coroutine_t *const co);
 int liteco_yield(liteco_coroutine_t *const co);
 int liteco_kill(liteco_coroutine_t *const co);
@@ -69,19 +76,21 @@ struct liteco_schedule_s {
 int liteco_schedule_init(liteco_schedule_t *const sche);
 int liteco_schedule_join(liteco_schedule_t *const sche, liteco_coroutine_t *const co);
 int liteco_schedule_pop(liteco_coroutine_t **const co, liteco_schedule_t *const sche);
+int liteco_schedule_remove_spec(liteco_schedule_t *const sche, liteco_coroutine_t *const co);
 liteco_boolean_t liteco_schedule_empty(liteco_schedule_t *const sche);
 
 struct liteco_channel_s {
     liteco_boolean_t closed;
     liteco_link_t events;
-    liteco_link_t waiting_co;
+    liteco_schedule_t waiting_co;
 
     pthread_mutex_t mutex;
 };
 
 int liteco_channel_init(liteco_channel_t *const channel);
 int liteco_channel_subscribe(void **const event, liteco_channel_t **const channel, liteco_coroutine_t *const co, ...);
-int liteco_channel_publish(liteco_coroutine_t **const co, liteco_channel_t *const channel, void *const event);
+int liteco_channel_publish(liteco_channel_t *const channel, void *const event);
+int liteco_channel_pop(liteco_coroutine_t **const co, liteco_channel_t *const channel);
 
 extern liteco_channel_t __LITECO_CLOSED_CHANNEL__;
 

@@ -6,7 +6,10 @@ static int liteco_callback(void *const);
 extern int liteco_internal_context_swap(liteco_internal_context_t *const from, liteco_internal_context_t *const to);
 extern int liteco_internal_context_make(liteco_internal_context_t *const ctx, void *stack, size_t st_size, int (*fn) (void *const), void *const args);
 
-int liteco_create(liteco_coroutine_t *const co, void *const stack, size_t st_size, int (*fn) (liteco_coroutine_t *const, void *const), void *const args) {
+int liteco_create(liteco_coroutine_t *const co,
+                  void *const stack, size_t st_size,
+                  int (*fn) (liteco_coroutine_t *const, void *const), void *const args,
+                  int (*release) (void *const, const size_t)) {
     if (co == NULL || stack == NULL || fn == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
@@ -15,7 +18,10 @@ int liteco_create(liteco_coroutine_t *const co, void *const stack, size_t st_siz
     co->status = LITECO_STARTING;
     co->link = (liteco_internal_context_t **) ((((unsigned long) (stack + st_size) - 8) & 0xfffffffffffffff0));
     co->sche = NULL;
-    co->channel = 0;
+    co->ref_count = 1;
+    co->release = release;
+    co->st_size = st_size;
+    co->stack = stack;
     pthread_mutex_init(&co->mutex, NULL);
     liteco_internal_context_make(&co->context, stack, st_size, liteco_callback, co);
     *co->link = NULL;
@@ -61,7 +67,6 @@ int liteco_yield(liteco_coroutine_t *const co) {
     pthread_mutex_unlock(&co->mutex);
 
     liteco_internal_context_swap(&co->context, *co->link);
-
     return LITECO_SUCCESS;
 }
 
@@ -72,8 +77,9 @@ int liteco_kill(liteco_coroutine_t *const co) {
 
     pthread_mutex_lock(&co->mutex);
     co->status = LITECO_TERMINATE;
-    if (co->sche == NULL && co->channel == 0) {
-
+    co->ref_count--;
+    if (co->ref_count == 0) {
+        co->release(co->stack, co->st_size);
     }
     pthread_mutex_unlock(&co->mutex);
 
