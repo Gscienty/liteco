@@ -27,6 +27,7 @@ int productor(liteco_coroutine_t *const co, void *const args) {
         event = malloc(sizeof(*event));
         *event = i;
         liteco_g_publish_st(&channel, event);
+        printf("product\n");
         liteco_g_yield(co);
     }
 
