@@ -23,7 +23,7 @@ struct liteco_coroutine_s {
 
     int (*fn) (liteco_coroutine_t *const, void *const);
     void *args;
-    int (*release) (void *const, const size_t);
+    int (*finished_fn) (liteco_coroutine_t *const);
     size_t st_size;
     void *stack;
 
@@ -55,7 +55,7 @@ struct liteco_coroutine_s {
 int liteco_create(liteco_coroutine_t *const co,
                   void *const stack, const size_t st_size,
                   int (*fn) (liteco_coroutine_t *const, void *const), void *const args,
-                  int (*release) (void *const, const size_t));
+                  int (*finished_fn) (liteco_coroutine_t *const co));
 int liteco_resume(liteco_coroutine_t *const co);
 int liteco_yield(liteco_coroutine_t *const co);
 

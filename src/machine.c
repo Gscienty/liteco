@@ -298,8 +298,8 @@ int liteco_machine_schedule(liteco_machine_t *const machine) {
     liteco_resume(co);
 
     if (co->status == LITECO_TERMINATE) {
-        if (co->release != NULL) {
-            co->release(co->stack, co->st_size);
+        if (co->finished_fn != NULL) {
+            co->finished_fn(co);
         }
     }
     else if (co->status == LITECO_RUNNING) {

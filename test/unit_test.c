@@ -5,9 +5,18 @@
 char consumer_stack[128 * 1024];
 char producer_stack[128 * 1024];
 
+int consumer_finished = LITECO_FALSE;
+
 liteco_channel_t chan;
 
+int consumer_finished_fn(liteco_coroutine_t *const co) {
+    (void) co;
+    consumer_finished = LITECO_TRUE;
+    return LITECO_SUCCESS;
+}
+
 int consumer_fn(liteco_coroutine_t *const co, void *const args) {
+    (void) args;
     int *ele;
     liteco_channel_t *const recv_channels[] = { &chan, NULL };
 
@@ -22,6 +31,7 @@ int consumer_fn(liteco_coroutine_t *const co, void *const args) {
 }
 
 int producer_fn(liteco_coroutine_t *const co, void *const args) {
+    (void) args;
     printf("producer\n");
 
     int i = 0;
@@ -39,7 +49,7 @@ int producer_fn(liteco_coroutine_t *const co, void *const args) {
 
 int main() {
     liteco_coroutine_t consumer;
-    liteco_create(&consumer, consumer_stack, 128 * 1024, consumer_fn, NULL, NULL);
+    liteco_create(&consumer, consumer_stack, 128 * 1024, consumer_fn, NULL, consumer_finished_fn);
 
     liteco_coroutine_t producer;
     liteco_create(&producer, producer_stack, 128 * 1024, producer_fn, NULL, NULL);
@@ -52,27 +62,9 @@ int main() {
     liteco_machine_join(&machine, &consumer);
     liteco_machine_join(&machine, &producer);
 
-    liteco_machine_schedule(&machine);
-    liteco_machine_schedule(&machine);
-    liteco_machine_schedule(&machine);
-    liteco_machine_schedule(&machine);
-    liteco_machine_schedule(&machine);
-    liteco_machine_schedule(&machine);
-    liteco_machine_schedule(&machine);
-    liteco_machine_schedule(&machine);
-    liteco_machine_schedule(&machine);
-    liteco_machine_schedule(&machine);
-    liteco_machine_schedule(&machine);
-    liteco_machine_schedule(&machine);
-    liteco_machine_schedule(&machine);
-    liteco_machine_schedule(&machine);
-    liteco_machine_schedule(&machine);
-    liteco_machine_schedule(&machine);
-    liteco_machine_schedule(&machine);
-    liteco_machine_schedule(&machine);
-    liteco_machine_schedule(&machine);
-    liteco_machine_schedule(&machine);
-    liteco_machine_schedule(&machine);
+    while (consumer_finished == LITECO_FALSE) {
+        liteco_machine_schedule(&machine);
+    }
 
     return 0;
 }
