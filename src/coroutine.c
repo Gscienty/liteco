@@ -1,10 +1,14 @@
 #include "liteco.h"
 #include <stddef.h>
+#include <sys/types.h>
+#include <sys/time.h>
 
 static int liteco_callback(void *const);
 
 extern int liteco_internal_context_swap(liteco_internal_context_t *const from, liteco_internal_context_t *const to);
 extern int liteco_internal_context_make(liteco_internal_context_t *const ctx, void *stack, size_t st_size, int (*fn) (void *const), void *const args);
+extern int liteco_internal_atomic_cas(int *const ptr, const int old, const int nex);
+extern int liteco_internal_p_yield(const int n);
 
 int liteco_create(liteco_coroutine_t *const co,
                   void *const stack, size_t st_size,
@@ -17,8 +21,6 @@ int liteco_create(liteco_coroutine_t *const co,
     co->args = args;
     co->status = LITECO_STARTING;
     co->link = (liteco_internal_context_t **) ((((unsigned long) (stack + st_size) - 8) & 0xfffffffffffffff0));
-    co->sche = NULL;
-    co->ref_count = 1;
     co->release = release;
     co->st_size = st_size;
     co->stack = stack;
@@ -46,15 +48,6 @@ int liteco_resume(liteco_coroutine_t *const co) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
     pthread_mutex_lock(&co->mutex);
-    if (co->status == LITECO_TERMINATE) {
-        pthread_mutex_unlock(&co->mutex);
-        return LITECO_SUCCESS;
-    }
-    if (co->status == LITECO_RUNNING) {
-        pthread_mutex_unlock(&co->mutex);
-        return LITECO_SUCCESS;
-    }
-    co->status = LITECO_RUNNING;
     *co->link = &this_context;
     pthread_mutex_unlock(&co->mutex);
 
@@ -67,30 +60,7 @@ int liteco_yield(liteco_coroutine_t *const co) {
     if (co == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
-
-    pthread_mutex_lock(&co->mutex);
-    if (co->status == LITECO_RUNNING) {
-        co->status = LITECO_READYING;
-    }
-    pthread_mutex_unlock(&co->mutex);
-
     liteco_internal_context_swap(&co->context, *co->link);
-    return LITECO_SUCCESS;
-}
-
-int liteco_release(liteco_coroutine_t *const co) {
-    if (co == NULL) {
-        return LITECO_PARAMETER_UNEXCEPTION;
-    }
-
-    pthread_mutex_lock(&co->mutex);
-    co->status = LITECO_TERMINATE;
-    co->ref_count--;
-    if (co->ref_count == 0) {
-        co->release(co->stack, co->st_size);
-    }
-    pthread_mutex_unlock(&co->mutex);
-
     return LITECO_SUCCESS;
 }
 
@@ -103,5 +73,45 @@ static int liteco_callback(void *const co_) {
     pthread_mutex_lock(&co->mutex);
     co->status = LITECO_TERMINATE;
     pthread_mutex_unlock(&co->mutex);
+
+    return liteco_yield(co);
+}
+
+static inline u_int64_t __now__() {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return tv.tv_sec * 1000 * 1000 + tv.tv_usec;
+}
+
+int liteco_status_cas(liteco_coroutine_t *const co, int old, int nex) {
+    int i;
+    int x;
+    u_int64_t next_yield;
+    if (co == NULL) {
+        return LITECO_PARAMETER_UNEXCEPTION;
+    }
+
+    for (i = 0; !liteco_internal_atomic_cas(&co->status, old, nex); i++) {
+        if (old == LITECO_WAITING && co->status == LITECO_RUNNING) {
+            return LITECO_INTERNAL_ERROR;
+        }
+
+        if (i == 0) {
+            next_yield = __now__() + 5;
+        }
+
+        if (__now__() < next_yield) {
+            for (x = 0; x < 10 && co->status != old; x++) {
+                liteco_internal_p_yield(1);
+            }
+        }
+        else {
+            sched_yield();
+
+            next_yield = __now__() + 2;
+        }
+    }
+
     return LITECO_SUCCESS;
 }
+

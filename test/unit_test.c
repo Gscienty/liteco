@@ -2,47 +2,77 @@
 #include <stdio.h>
 #include <malloc.h>
 
-liteco_channel_t channel;
+char consumer_stack[128 * 1024];
+char producer_stack[128 * 1024];
 
-int consumer(liteco_coroutine_t *const co, void *const args) {
-    (void) args;
-    void *event;
-    liteco_channel_t *recv_channel;
+liteco_channel_t chan;
+
+int consumer_fn(liteco_coroutine_t *const co, void *const args) {
+    int *ele;
+    liteco_channel_t *const recv_channels[] = { &chan, NULL };
 
     int i = 0;
-    for (i = 0; i < 5; i++) {
-        liteco_channel_subscribe(&event, &recv_channel, co, &channel, NULL);
-        printf("%d\n", *(int *) event);
-        free(event);
+    for (i = 0; i < 10; i++) {
+        liteco_channel_recv((void **) &ele, NULL, co->machine, co, recv_channels, 0);
+        printf("consumer recv %d\n", *ele);
+        free(ele);
     }
 
     return LITECO_SUCCESS;
 }
 
-int productor(liteco_coroutine_t *const co, void *const args) {
-    (void) args;
+int producer_fn(liteco_coroutine_t *const co, void *const args) {
+    printf("producer\n");
+
     int i = 0;
-    for (i = 0; i < 5; i++) {
-        int *event = NULL;
-        event = malloc(sizeof(*event));
-        *event = i;
-        liteco_g_publish_st(&channel, event);
-        printf("product\n");
-        liteco_g_yield(co);
+    for (i = 0; i < 20; i++) {
+        int *ele = malloc(sizeof(*ele));
+        *ele = i;
+        liteco_channel_send(&chan, ele);
+        printf("producer send\n");
+        liteco_yield(co);
     }
+
 
     return LITECO_SUCCESS;
 }
 
 int main() {
-    liteco_channel_init(&channel);
-    liteco_coroutine_t *consumer_co = NULL;
-    liteco_g_create_st(&consumer_co, consumer, NULL);
-    liteco_g_create_st(NULL, productor, NULL);
+    liteco_coroutine_t consumer;
+    liteco_create(&consumer, consumer_stack, 128 * 1024, consumer_fn, NULL, NULL);
 
-    liteco_g_resume_until_terminate_st(consumer_co);
+    liteco_coroutine_t producer;
+    liteco_create(&producer, producer_stack, 128 * 1024, producer_fn, NULL, NULL);
 
-    printf("%d\n", consumer_co->ref_count);
+    liteco_channel_init(&chan);
+
+    liteco_machine_t machine;
+    liteco_machine_init(&machine);
+
+    liteco_machine_join(&machine, &consumer);
+    liteco_machine_join(&machine, &producer);
+
+    liteco_machine_schedule(&machine);
+    liteco_machine_schedule(&machine);
+    liteco_machine_schedule(&machine);
+    liteco_machine_schedule(&machine);
+    liteco_machine_schedule(&machine);
+    liteco_machine_schedule(&machine);
+    liteco_machine_schedule(&machine);
+    liteco_machine_schedule(&machine);
+    liteco_machine_schedule(&machine);
+    liteco_machine_schedule(&machine);
+    liteco_machine_schedule(&machine);
+    liteco_machine_schedule(&machine);
+    liteco_machine_schedule(&machine);
+    liteco_machine_schedule(&machine);
+    liteco_machine_schedule(&machine);
+    liteco_machine_schedule(&machine);
+    liteco_machine_schedule(&machine);
+    liteco_machine_schedule(&machine);
+    liteco_machine_schedule(&machine);
+    liteco_machine_schedule(&machine);
+    liteco_machine_schedule(&machine);
 
     return 0;
 }
