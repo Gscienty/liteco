@@ -21,9 +21,8 @@ __make_context:
     movq %rax, 96(%rdi)                 ; /* 将该上下文的基址地址存储到context的RBX的位置 */
     subq $8, %rax
     movq %rax, 128(%rdi)                ; /* 将该上下文的栈顶指针存储到context的RSP的位置 */
-    movq $__end_context, (%rax)         ; /* 将__end_context(上下文执行完毕后的收尾函数)的函数地址入协程栈 */
     movq (%rdi), %r9
-    movq %r9, 8(%rax)                   ; /* 将关联context存入到协程栈栈底（为方便__end_context调取） */
+    movq %r9, 8(%rax)                   ; /* 将关联context存入到协程栈栈底 */
                                         ; /* 此时假设SP为0，则内存分布如下： */
                                         ; /* SP(0): stored __end_context, RBX(8) stored context */
 

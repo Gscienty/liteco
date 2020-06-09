@@ -5,3 +5,6 @@ core.*
 *.cmake
 CMakeCache.txt
 CMakeFiles/
+*.a
+*.so
+Makefile
