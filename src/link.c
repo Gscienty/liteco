@@ -1,5 +1,4 @@
 #include "liteco.h"
-#include <malloc.h>
 
 int liteco_link_init(liteco_link_t *const link) {
     if (link == NULL) {

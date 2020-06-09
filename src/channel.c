@@ -2,7 +2,6 @@
 #include "internal/link.h"
 #include "internal/channel.h"
 #include "internal/malloc.h"
-#include <stdio.h>
 
 liteco_channel_t __CLOSED_CHAN__ = { .closed = LITECO_TRUE };
 
