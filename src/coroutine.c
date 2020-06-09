@@ -27,6 +27,7 @@ int liteco_create(liteco_coroutine_t *const co,
     pthread_mutex_init(&co->mutex, NULL);
     liteco_internal_context_make(&co->context, stack, st_size, liteco_callback, co);
     *co->link = NULL;
+    co->result = 0;
 
     return LITECO_SUCCESS;
 }
@@ -69,7 +70,7 @@ static int liteco_callback(void *const co_) {
     if (co_ == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
-    co->fn(co, co->args);
+    co->result = co->fn(co, co->args);
     pthread_mutex_lock(&co->mutex);
     co->status = LITECO_TERMINATE;
     pthread_mutex_unlock(&co->mutex);

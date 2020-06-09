@@ -26,6 +26,7 @@ struct liteco_coroutine_s {
     int (*finished_fn) (liteco_coroutine_t *const);
     size_t st_size;
     void *stack;
+    int result;
 
     pthread_mutex_t mutex;
 
