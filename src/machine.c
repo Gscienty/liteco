@@ -4,7 +4,6 @@
 #include "internal/couroutine.h"
 #include "internal/malloc.h"
 
-_Thread_local liteco_coroutine_t *__CURR_CO__ = NULL;
 
 int liteco_machine_init(liteco_machine_t *const machine) {
     if (machine == NULL) {
@@ -276,7 +275,6 @@ int liteco_machine_schedule(liteco_machine_t *const machine) {
     }
 
     co = NULL;
-    __CURR_CO__ = co;
     while (liteco_link_empty(&machine->q_ready)) {
         if (liteco_link_empty(&machine->q_timer)) {
             pthread_cond_wait(&machine->cond, &machine->lock);
@@ -298,9 +296,7 @@ int liteco_machine_schedule(liteco_machine_t *const machine) {
     pthread_mutex_unlock(&machine->lock);
 
     liteco_status_cas(co, LITECO_READYING, LITECO_RUNNING);
-    __CURR_CO__ = co;
     liteco_resume(co);
-    __CURR_CO__ = NULL;
 
     if (co->status == LITECO_TERMINATE) {
         if (co->finished_fn != NULL) {

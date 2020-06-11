@@ -18,7 +18,7 @@ int liteco_channel_init(liteco_channel_t *const channel) {
     return LITECO_SUCCESS;
 }
 
-int liteco_channel_recv(void **const ele, liteco_channel_t **const channel,
+int liteco_channel_recv(const void **const ele, const liteco_channel_t **const channel,
                         liteco_machine_t *const machine,
                         liteco_coroutine_t *const co, liteco_channel_t *const channels[], const u_int64_t timeout) {
     liteco_link_node_t *node = NULL;
@@ -108,7 +108,7 @@ int liteco_channel_remove_spec(liteco_link_t *const link, liteco_machine_t *cons
     return LITECO_SUCCESS;
 }
 
-int liteco_channel_send(liteco_channel_t *const channel, void *const element) {
+int liteco_channel_send(liteco_channel_t *const channel, const void *const element) {
     liteco_link_node_t *node = NULL;
     liteco_channel_element_link_node_t *ele_node = NULL;
     if (channel == NULL || element == NULL) {

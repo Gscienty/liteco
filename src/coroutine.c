@@ -3,6 +3,8 @@
 #include <sys/types.h>
 #include <sys/time.h>
 
+_Thread_local liteco_coroutine_t *__CURR_CO__ = NULL;
+
 static int liteco_callback(void *const);
 
 extern int liteco_internal_context_swap(liteco_internal_context_t *const from, liteco_internal_context_t *const to);
@@ -52,6 +54,7 @@ int liteco_resume(liteco_coroutine_t *const co) {
     *co->link = &this_context;
     pthread_mutex_unlock(&co->mutex);
 
+    __CURR_CO__ = co;
     liteco_internal_context_swap(&this_context, &co->context);
 
     return LITECO_SUCCESS;
@@ -61,6 +64,7 @@ int liteco_yield(liteco_coroutine_t *const co) {
     if (co == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
+    __CURR_CO__ = NULL;
     liteco_internal_context_swap(&co->context, *co->link);
     return LITECO_SUCCESS;
 }

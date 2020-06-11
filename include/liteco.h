@@ -94,8 +94,8 @@ struct liteco_channel_s {
 };
 
 int liteco_channel_init(liteco_channel_t *const channel);
-int liteco_channel_send(liteco_channel_t *const channel, void *const element);
-int liteco_channel_recv(void **const ele, liteco_channel_t **const channel,
+int liteco_channel_send(liteco_channel_t *const channel, const void *const element);
+int liteco_channel_recv(const void **const ele, const liteco_channel_t **const channel,
                         liteco_machine_t *const machine,
                         liteco_coroutine_t *const co, liteco_channel_t *const channels[], const u_int64_t timeout);
 int liteco_channel_close(liteco_channel_t *const channel);
