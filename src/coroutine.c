@@ -3,7 +3,7 @@
 #include <sys/types.h>
 #include <sys/time.h>
 
-_Thread_local liteco_coroutine_t *__CURR_CO__ = NULL;
+__thread liteco_coroutine_t *__CURR_CO__ = NULL;
 
 static int liteco_callback(void *const);
 
