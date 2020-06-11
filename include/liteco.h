@@ -101,5 +101,6 @@ int liteco_channel_recv(void **const ele, liteco_channel_t **const channel,
 int liteco_channel_close(liteco_channel_t *const channel);
 
 extern liteco_channel_t __CLOSED_CHAN__;
+extern _Thread_local liteco_coroutine_t *__CURR_CO__;
 
 #endif
