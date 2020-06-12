@@ -324,3 +324,18 @@ int liteco_machine_join(liteco_machine_t *const machine, liteco_coroutine_t *con
 
     return LITECO_SUCCESS;
 }
+
+int liteco_machine_delay_join(liteco_machine_t *const machine, const u_int64_t timeout, liteco_coroutine_t *const co) {
+    if (machine == NULL || co == NULL) {
+        return LITECO_PARAMETER_UNEXCEPTION;
+    }
+    co->machine = machine;
+    liteco_status_cas(co, LITECO_STARTING, LITECO_WAITING);
+
+    pthread_mutex_lock(&machine->lock);
+    liteco_timer_join(&machine->q_timer, co, timeout);
+    pthread_mutex_unlock(&machine->lock);
+
+
+    return LITECO_SUCCESS;
+}

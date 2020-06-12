@@ -2,6 +2,7 @@
 #include "internal/link.h"
 #include "internal/channel.h"
 #include "internal/malloc.h"
+#include <sys/time.h>
 
 liteco_channel_t __CLOSED_CHAN__ = { .closed = LITECO_TRUE };
 
@@ -18,6 +19,12 @@ int liteco_channel_init(liteco_channel_t *const channel) {
     return LITECO_SUCCESS;
 }
 
+static inline u_int64_t __now__() {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return tv.tv_sec * 1000 * 1000 + tv.tv_usec;
+}
+
 int liteco_channel_recv(const void **const ele, const liteco_channel_t **const channel,
                         liteco_machine_t *const machine,
                         liteco_coroutine_t *const co, liteco_channel_t *const channels[], const u_int64_t timeout) {
@@ -27,6 +34,10 @@ int liteco_channel_recv(const void **const ele, const liteco_channel_t **const c
         return LITECO_PARAMETER_UNEXCEPTION;
     }
     for ( ;; ) {
+        if (timeout != 0 && timeout <= __now__()) {
+            return LITECO_TIMEOUT;
+        }
+
         for (eachor_channel = channels; *eachor_channel != NULL; eachor_channel++) {
             pthread_mutex_lock(&(*eachor_channel)->lock);
             if ((*eachor_channel)->closed) {

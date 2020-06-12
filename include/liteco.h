@@ -39,6 +39,7 @@ struct liteco_coroutine_s {
 #define LITECO_INTERNAL_ERROR           -3
 #define LITECO_EMPTY                    -4
 #define LITECO_CLOSED                   -5
+#define LITECO_TIMEOUT                  -6
 #define LITECO_SUCCESS                  0
 
 #define LITECO_UNKNOW       0x00
@@ -83,6 +84,7 @@ int liteco_machine_wait(liteco_machine_t *const machine, liteco_coroutine_t *con
 int liteco_machine_channel_notify(liteco_machine_t *const machine, liteco_channel_t *const channel);
 int liteco_machine_schedule(liteco_machine_t *const machine);
 int liteco_machine_join(liteco_machine_t *const machine, liteco_coroutine_t *const co);
+int liteco_machine_delay_join(liteco_machine_t *const machine, const u_int64_t timeout, liteco_coroutine_t *const co);
 
 struct liteco_channel_s {
     liteco_boolean_t closed;
