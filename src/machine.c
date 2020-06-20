@@ -4,7 +4,6 @@
 #include "internal/couroutine.h"
 #include "internal/malloc.h"
 
-
 int liteco_machine_init(liteco_machine_t *const machine) {
     if (machine == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
@@ -27,6 +26,7 @@ int liteco_timer_join(liteco_link_t *const q_timer, liteco_coroutine_t *const co
     if (q_timer == NULL || co == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
+    liteco_timer_remove_spec(q_timer, co);
 
     if ((timer_node = liteco_malloc(sizeof(*timer_node))) == NULL) {
         return LITECO_INTERNAL_ERROR;
@@ -111,6 +111,8 @@ int liteco_wait_join(liteco_link_t *const q_wait, liteco_coroutine_t *const co, 
     if (q_wait == NULL || co == NULL || channels == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
+    liteco_wait_remove_spec(q_wait, co);
+
     if ((node = liteco_malloc(sizeof(*node))) == NULL) {
         return LITECO_INTERNAL_ERROR;
     }
@@ -244,9 +246,6 @@ int liteco_machine_channel_notify(liteco_machine_t *const machine, liteco_channe
         liteco_status_cas(co, LITECO_WAITING, LITECO_READYING);
         co->active_channel = channel;
         liteco_ready_join(&machine->q_ready, co);
-        pthread_mutex_unlock(&machine->lock);
-        pthread_cond_signal(&machine->cond);
-        return LITECO_SUCCESS;
     }
     pthread_mutex_unlock(&machine->lock);
     pthread_cond_signal(&machine->cond);
@@ -266,10 +265,11 @@ int liteco_machine_schedule(liteco_machine_t *const machine) {
     if (machine == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
-    u_int64_t now = __now__();
     pthread_mutex_lock(&machine->lock);
-    while (!liteco_link_empty(&machine->q_timer) && liteco_timer_last(&machine->q_timer) < now) {
+    while (!liteco_link_empty(&machine->q_timer) && liteco_timer_last(&machine->q_timer) < __now__()) {
         liteco_timer_pop(&co, &machine->q_timer);
+        liteco_wait_remove_spec(&machine->q_wait, co);
+
         liteco_status_cas(co, LITECO_WAITING, LITECO_READYING);
         liteco_ready_join(&machine->q_ready, co);
     }
@@ -283,6 +283,8 @@ int liteco_machine_schedule(liteco_machine_t *const machine) {
             timeout = liteco_timer_last(&machine->q_timer);
             if (timeout < __now__()) {
                 liteco_timer_pop(&co, &machine->q_timer);
+                liteco_wait_remove_spec(&machine->q_wait, co);
+
                 liteco_status_cas(co, LITECO_WAITING, LITECO_READYING);
                 liteco_ready_join(&machine->q_ready, co);
             }
@@ -335,7 +337,7 @@ int liteco_machine_delay_join(liteco_machine_t *const machine, const u_int64_t t
     pthread_mutex_lock(&machine->lock);
     liteco_timer_join(&machine->q_timer, co, timeout);
     pthread_mutex_unlock(&machine->lock);
-
+    pthread_cond_signal(&machine->cond);
 
     return LITECO_SUCCESS;
 }
