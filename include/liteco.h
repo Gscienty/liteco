@@ -59,7 +59,7 @@ int liteco_create(liteco_coroutine_t *const co,
                   int (*fn) (liteco_coroutine_t *const, void *const), void *const args,
                   int (*finished_fn) (liteco_coroutine_t *const co));
 int liteco_resume(liteco_coroutine_t *const co);
-int liteco_yield(liteco_coroutine_t *const co);
+int liteco_yield();
 
 struct liteco_link_node_s {
     liteco_link_node_t *next;

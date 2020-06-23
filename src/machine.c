@@ -230,7 +230,7 @@ int liteco_machine_wait(liteco_machine_t *const machine, liteco_coroutine_t *con
     pthread_cond_signal(&machine->cond);
 
     liteco_status_cas(co, LITECO_RUNNING, LITECO_WAITING);
-    liteco_yield(co);
+    liteco_yield();
     return LITECO_SUCCESS;
 }
 

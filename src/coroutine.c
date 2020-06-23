@@ -60,8 +60,9 @@ int liteco_resume(liteco_coroutine_t *const co) {
     return LITECO_SUCCESS;
 }
 
-int liteco_yield(liteco_coroutine_t *const co) {
-    if (co == NULL) {
+int liteco_yield() {
+    liteco_coroutine_t *co = __CURR_CO__;
+    if (__CURR_CO__ == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
     __CURR_CO__ = NULL;
@@ -79,7 +80,7 @@ static int liteco_callback(void *const co_) {
     co->status = LITECO_TERMINATE;
     pthread_mutex_unlock(&co->mutex);
 
-    return liteco_yield(co);
+    return liteco_yield();
 }
 
 static inline u_int64_t __now__() {
