@@ -56,8 +56,7 @@ struct liteco_coroutine_s {
 
 int liteco_create(liteco_coroutine_t *const co,
                   void *const stack, const size_t st_size,
-                  int (*fn) (void *const), void *const args,
-                  int (*finished_fn) (liteco_coroutine_t *const co));
+                  int (*fn) (void *const), void *const args, int (*finished_fn) (liteco_coroutine_t *const co));
 int liteco_resume(liteco_coroutine_t *const co);
 int liteco_yield();
 
@@ -98,8 +97,7 @@ struct liteco_channel_s {
 int liteco_channel_init(liteco_channel_t *const channel);
 int liteco_channel_send(liteco_channel_t *const channel, const void *const element);
 int liteco_channel_recv(const void **const ele, const liteco_channel_t **const channel,
-                        liteco_machine_t *const machine,
-                        liteco_coroutine_t *const co, liteco_channel_t *const channels[], const u_int64_t timeout);
+                        liteco_machine_t *const machine, liteco_channel_t *const channels[], const u_int64_t timeout);
 int liteco_channel_close(liteco_channel_t *const channel);
 
 extern liteco_channel_t __CLOSED_CHAN__;

@@ -26,11 +26,10 @@ static inline u_int64_t __now__() {
 }
 
 int liteco_channel_recv(const void **const ele, const liteco_channel_t **const channel,
-                        liteco_machine_t *const machine,
-                        liteco_coroutine_t *const co, liteco_channel_t *const channels[], const u_int64_t timeout) {
+                        liteco_machine_t *const machine, liteco_channel_t *const channels[], const u_int64_t timeout) {
     liteco_link_node_t *node = NULL;
     liteco_channel_t *const *eachor_channel;
-    if (co == NULL || machine == NULL) {
+    if (__CURR_CO__ == NULL || machine == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
     for ( ;; ) {
@@ -69,7 +68,7 @@ int liteco_channel_recv(const void **const ele, const liteco_channel_t **const c
             pthread_mutex_unlock(&(*eachor_channel)->lock);
         }
 
-        liteco_machine_wait(machine, co, channels, timeout);
+        liteco_machine_wait(machine, __CURR_CO__, channels, timeout);
 
         for (eachor_channel = channels; *eachor_channel != NULL; eachor_channel++) {
             pthread_mutex_lock(&(*eachor_channel)->lock);

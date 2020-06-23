@@ -14,8 +14,7 @@ extern int liteco_internal_p_yield(const int n);
 
 int liteco_create(liteco_coroutine_t *const co,
                   void *const stack, size_t st_size,
-                  int (*fn) (void *const), void *const args,
-                  int (*finished_fn) (liteco_coroutine_t *const)) {
+                  int (*fn) (void *const), void *const args, int (*finished_fn) (liteco_coroutine_t *const)) {
     if (co == NULL || stack == NULL || fn == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
