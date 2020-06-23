@@ -14,7 +14,7 @@ extern int liteco_internal_p_yield(const int n);
 
 int liteco_create(liteco_coroutine_t *const co,
                   void *const stack, size_t st_size,
-                  int (*fn) (liteco_coroutine_t *const, void *const), void *const args,
+                  int (*fn) (void *const), void *const args,
                   int (*finished_fn) (liteco_coroutine_t *const)) {
     if (co == NULL || stack == NULL || fn == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
@@ -75,7 +75,7 @@ static int liteco_callback(void *const co_) {
     if (co_ == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
-    co->result = co->fn(co, co->args);
+    co->result = co->fn(co->args);
     pthread_mutex_lock(&co->mutex);
     co->status = LITECO_TERMINATE;
     pthread_mutex_unlock(&co->mutex);
