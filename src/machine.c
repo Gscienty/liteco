@@ -41,7 +41,8 @@ int liteco_timer_join(liteco_link_t *const q_timer, liteco_coroutine_t *const co
         if (timeout < liteco_container_of(liteco_timer_coroutine_t, node, node)->timeout) {
             timer_node->node.next = node;
             prev->next = &timer_node->node;
-            break;
+
+            return LITECO_SUCCESS;
         }
 
         prev = node;
@@ -49,9 +50,9 @@ int liteco_timer_join(liteco_link_t *const q_timer, liteco_coroutine_t *const co
     }
 
     if (timer_node->node.next == NULL) {
-        q_timer->q_tail->next = &timer_node->node;
-        timer_node->node.next = &q_timer->head;
+        liteco_link_push(q_timer, &timer_node->node);
     }
+
 
     return LITECO_SUCCESS;
 }
