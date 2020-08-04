@@ -4,7 +4,7 @@
 void *liteco_malloc(const size_t size) {
     void *result = malloc(size);
 
-#if DEBUG
+#if LITECO_DEBUG
     printf("malloc %ld\n", (size_t) result);
 #endif
 
@@ -12,7 +12,7 @@ void *liteco_malloc(const size_t size) {
 }
 
 int liteco_free(void *const ptr) {
-#if DEBUG
+#if LITECO_DEBUG
     printf("free %ld\n", (size_t) ptr);
 #endif
 
