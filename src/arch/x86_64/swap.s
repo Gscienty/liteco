@@ -25,6 +25,7 @@ __swap_context:
     movq (%rsp), %rcx
     movq %rcx, 136(%rdi)
 
+    /* 由于 __swap_context 是一次无参数函数调用，因此实际应该存储的栈顶指针是 RSP(8)，即调用__swap_context时存入栈的PC寄存器的值 */
     leaq 8(%rsp), %rcx
     movq %rcx, 128(%rdi)
 

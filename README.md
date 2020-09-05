@@ -5,4 +5,7 @@
 
 ## 简介
 
-Liteco提供协程类`liteco_coroutine_t`，通过它可向您的系统提供协程能力。
+Liteco提供协程类`liteco_coroutine_t`，通过它可向您的系统提供协程能力。 本项目实现了实现协程模型的三个元素：协程、运行时、等待通道。
+ 1. 协程(`liteco_coroutine_t`)：具体可执行的可执行体
+ 2. 运行时(`liteco_machine_t`)：协程具体执行时依附的运行时平台
+ 3. 等待通道(`liteco_channel_t`)：该模块用于存储当前挂起的协程所在的运行时

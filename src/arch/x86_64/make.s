@@ -13,9 +13,9 @@ __make_context:
     addq %rdx, %rax                     ; /* 计算出栈顶指针所指向的内存地址 */
 
                                         ; /* 对齐栈顶指针 */
-    subq $8, %rax
-    andq $0xfffffffffffffff0, %rax
-    subq $8, %rax
+    subq $8, %rax                       ;
+    andq $0xfffffffffffffff0, %rax      ;
+    subq $8, %rax                       ;
 
     addq $8, %rax
     movq %rax, 96(%rdi)                 ; /* 将该上下文的基址地址存储到context的RBX的位置 */
