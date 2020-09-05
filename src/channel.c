@@ -1,3 +1,23 @@
+/*
+ * Copyright (c) 2020 Gscienty <gaoxiaochuan@hotmail.com>
+ *
+ * Distributed under the MIT software license, see the accompanying
+ * file LICENSE or https://www.opensource.org/licenses/mit-license.php .
+ *
+ * 本文件功能说明：
+ *
+ * 本文件主要是对等待通道的实现
+ *
+ * 1. liteco_channel_init
+ *      初始化等待通道
+ * 2. liteco_channel_send
+ *      向等待通道发送一个消息事件
+ * 3. liteco_channel_recv
+ *      等待一个消息事件
+ * 4. liteco_channel_close
+ *      关闭等待通道
+ */
+
 #include "liteco.h"
 #include "internal/link.h"
 #include "internal/channel.h"
@@ -25,20 +45,30 @@ static inline u_int64_t __now__() {
     return tv.tv_sec * 1000 * 1000 + tv.tv_usec;
 }
 
+
+// liteco_channel_recv是挂起当前运行的协程到运行时的等待队列中，
+// 等待指定的等待通道发来的消息来唤起当前协程。
+//
+// 判断当前线程是否处于协程当中的依据是 __CURR_CO__不为NULL，
+// 因此在执行liteco_channel_recv时，__CURR_CO__必须不为NULL，
+// 即当前线程处于协程状态中。
 int liteco_channel_recv(const void **const ele, const liteco_channel_t **const channel,
                         liteco_machine_t *const machine, liteco_channel_t *const channels[], const u_int64_t timeout) {
+
     liteco_link_node_t *node = NULL;
     liteco_channel_t *const *eachor_channel;
     if (__CURR_CO__ == NULL || machine == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
     for ( ;; ) {
+        // 当已经超过等待时间时，返回LITECO_TIMEOUT
         if (timeout != 0 && timeout <= __now__()) {
             return LITECO_TIMEOUT;
         }
 
         for (eachor_channel = channels; *eachor_channel != NULL; eachor_channel++) {
             pthread_mutex_lock(&(*eachor_channel)->lock);
+            // 当发现有等待队列已经关闭时，发回LITECO_CLOSED
             if ((*eachor_channel)->closed) {
                 if (channel != NULL) {
                     *channel = *eachor_channel;
@@ -46,6 +76,8 @@ int liteco_channel_recv(const void **const ele, const liteco_channel_t **const c
                 pthread_mutex_unlock(&(*eachor_channel)->lock);
                 return LITECO_CLOSED;
             }
+
+            // 当等待队列中的消息事件不为空时，获取消息事件队列中的队首事件，并返回LITECO_SUCCESS
             if (!liteco_link_empty(&(*eachor_channel)->q_ele)) {
                 if (channel != NULL) {
                     *channel = *eachor_channel;
@@ -62,6 +94,9 @@ int liteco_channel_recv(const void **const ele, const liteco_channel_t **const c
             pthread_mutex_unlock(&(*eachor_channel)->lock);
         }
 
+        // 如果判断需要等待消息事件时
+        // 将当前协程添加到当前的运行时中，并将运行时添加到每个等待通道的通知队列中
+        // 并保证当前运行时等待通道的通知队列中唯一
         for (eachor_channel = channels; *eachor_channel != NULL; eachor_channel++) {
             pthread_mutex_lock(&(*eachor_channel)->lock);
             liteco_channel_waiting_machine_join(&(*eachor_channel)->q_machines, machine);

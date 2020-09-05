@@ -9,7 +9,7 @@
  * 本文件声明了实现协程模型的三个元素：协程、运行时、等待通道。
  * 1. 协程(liteco_coroutine_t)：具体可执行的可执行体
  * 2. 运行时(liteco_machine_t)：协程具体执行时依附的运行时平台
- * 3. 等待通道(liteco_channel_t)：该模块用于存储当前挂起的协程所在的运行时
+ * 3. 等待通道(liteco_channel_t)：该模块用于唤起挂起在运行时的协程
  */
 
 #ifndef __LITECO_H__
@@ -140,6 +140,10 @@ int liteco_resume(liteco_coroutine_t *const co);
 
 /*
  * 当前协程释放对CPU的使用
+ *
+ * @return:
+ *      LITECO_SUCCESS 调配成功
+ *      LITECO_PARAMETER_UNEXCEPTION 参数错误
  */
 int liteco_yield();
 
@@ -152,35 +156,156 @@ struct liteco_link_s {
     liteco_link_node_t *q_tail;
 };
 
+// 协程运行时
 struct liteco_machine_s {
+    // 运行时就绪队列
     liteco_link_t q_ready;
+    // 运行时定时器等待队列
     liteco_link_t q_timer;
+    // 运行时阻塞队列
     liteco_link_t q_wait;
 
     pthread_cond_t cond;
     pthread_mutex_t lock;
+
 };
 
+/*
+ * 初始化协程运行时
+ *
+ * @param machine: 协程运行时
+ *
+ * @return:
+ *      LITECO_SUCCESS 调配成功
+ *      LITECO_PARAMETER_UNEXCEPTION 参数错误
+ */
 int liteco_machine_init(liteco_machine_t *const machine);
+
+/*
+ * 将一个协程添加到协程运行时的等待队列中
+ *
+ * @param machine: 协程运行时
+ * @param co: 协程
+ * @param channels: 等待通道，用于唤起协程的管道
+ * @param timeout: 超时唤起时间
+ *
+ * @return:
+ *      LITECO_SUCCESS 调配成功
+ *      LITECO_PARAMETER_UNEXCEPTION 参数错误
+ */
 int liteco_machine_wait(liteco_machine_t *const machine, liteco_coroutine_t *const co, liteco_channel_t *const channels[], const u_int64_t timeout);
+
+/*
+ * 通过等待通道唤起运行时中的等待协程
+ *
+ * @param machine: 协程运行时
+ * @param channel: 等待管道
+ *
+ * @return:
+ *      LITECO_SUCCESS 调配成功
+ *      LITECO_PARAMETER_UNEXCEPTION 参数错误
+ */
 int liteco_machine_channel_notify(liteco_machine_t *const machine, liteco_channel_t *const channel);
+
+/*
+ * 运行时调度运行一个协程
+ *
+ * @param machine: 运行时
+ *
+ * @return:
+ *      LITECO_SUCCESS 调配成功
+ *      LITECO_PARAMETER_UNEXCEPTION 参数错误
+ */
 int liteco_machine_schedule(liteco_machine_t *const machine);
+
+/*
+ * 将协程加入到运行时的就绪队列中
+ *
+ * @param machine: 运行时
+ * @param co: 协程
+ *
+ * @return:
+ *      LITECO_SUCCESS 调配成功
+ *      LITECO_PARAMETER_UNEXCEPTION 参数错误
+ */
 int liteco_machine_join(liteco_machine_t *const machine, liteco_coroutine_t *const co);
+
+/*
+ * 将协程加入到运行时的延时执行队列
+ *
+ * @param machine: 运行时
+ * @param timeout: 延时时间
+ * @param co: 协程
+ *
+ * @return:
+ *      LITECO_SUCCESS 调配成功
+ *      LITECO_PARAMETER_UNEXCEPTION 参数错误
+ */
 int liteco_machine_delay_join(liteco_machine_t *const machine, const u_int64_t timeout, liteco_coroutine_t *const co);
 
+// 等待通道
 struct liteco_channel_s {
+    // 等待通道是否已经关闭
     liteco_boolean_t closed;
 
+    // 等待通道的消息事件队列
     liteco_link_t q_ele;
+    // 等待通道通知的等待运行时
     liteco_link_t q_machines;
 
     pthread_mutex_t lock;
 };
 
+/*
+ * 初始化等待通道
+ *
+ * @param channel: 等待通道
+ *
+ * @return:
+ *      LITECO_SUCCESS 调配成功
+ *      LITECO_PARAMETER_UNEXCEPTION 参数错误
+ */
 int liteco_channel_init(liteco_channel_t *const channel);
+
+/*
+ * 向等待通道发送一个消息事件
+ *
+ * @param channel: 等待通道
+ * @param element: 消息事件
+ *
+ * @return:
+ *      LITECO_SUCCESS 调配成功
+ *      LITECO_PARAMETER_UNEXCEPTION 参数错误
+ */
 int liteco_channel_send(liteco_channel_t *const channel, const void *const element);
+
+/*
+ * 等待一个消息事件
+ *
+ * @param ele: 等待到的消息事件
+ * @param channel: 等待到的消息事件来源的等待通道
+ * @param machine: 协程运行时
+ * @param channels: 等待通道
+ * @param timeout: 超时
+ *
+ * @return:
+ *      LITECO_SUCCESS 调配成功
+ *      LITECO_TIMEOUT 等待消息事件超时
+ *      LITECO_CLOSED 某个等待通道被关闭
+ *      LITECO_PARAMETER_UNEXCEPTION 参数错误
+ */
 int liteco_channel_recv(const void **const ele, const liteco_channel_t **const channel,
                         liteco_machine_t *const machine, liteco_channel_t *const channels[], const u_int64_t timeout);
+
+/*
+ * 关闭等待通道
+ *
+ * @param channel: 消息通道
+ *
+ * @return:
+ *      LITECO_SUCCESS 调配成功
+ *      LITECO_PARAMETER_UNEXCEPTION 参数错误
+ */
 int liteco_channel_close(liteco_channel_t *const channel);
 
 extern liteco_channel_t __CLOSED_CHAN__;

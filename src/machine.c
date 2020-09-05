@@ -251,7 +251,7 @@ int liteco_machine_channel_notify(liteco_machine_t *const machine, liteco_channe
     pthread_mutex_unlock(&machine->lock);
     pthread_cond_signal(&machine->cond);
 
-    return LITECO_EMPTY;
+    return LITECO_SUCCESS;
 }
 
 static inline u_int64_t __now__() {
