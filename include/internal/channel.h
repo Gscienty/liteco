@@ -14,7 +14,7 @@
 typedef struct liteco_channel_link_node_s liteco_channel_link_node_t;
 struct liteco_channel_link_node_s {
     liteco_link_node_t node;
-    liteco_machine_t *machine;
+    liteco_runtime_t *runtime;
 };
 
 typedef struct liteco_channel_element_link_node_s liteco_channel_element_link_node_t;
@@ -23,7 +23,7 @@ struct liteco_channel_element_link_node_s {
     const void *element;
 };
 
-int liteco_channel_waiting_machine_join(liteco_link_t *const link, liteco_machine_t *const machine);
-int liteco_channel_remove_spec(liteco_link_t *const link, liteco_machine_t *const machine);
+int liteco_channel_waiting_runtime_join(liteco_link_t *const link, liteco_runtime_t *const runtime);
+int liteco_channel_remove_spec(liteco_link_t *const link, liteco_runtime_t *const runtime);
 
 #endif

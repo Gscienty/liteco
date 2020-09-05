@@ -31,7 +31,7 @@ int liteco_channel_init(liteco_channel_t *const channel) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
     liteco_link_init(&channel->q_ele);
-    liteco_link_init(&channel->q_machines);
+    liteco_link_init(&channel->q_runtimes);
     channel->closed = LITECO_FALSE;
 
     pthread_mutex_init(&channel->lock, NULL);
@@ -53,11 +53,11 @@ static inline u_int64_t __now__() {
 // 因此在执行liteco_channel_recv时，__CURR_CO__必须不为NULL，
 // 即当前线程处于协程状态中。
 int liteco_channel_recv(const void **const ele, const liteco_channel_t **const channel,
-                        liteco_machine_t *const machine, liteco_channel_t *const channels[], const u_int64_t timeout) {
+                        liteco_runtime_t *const runtime, liteco_channel_t *const channels[], const u_int64_t timeout) {
 
     liteco_link_node_t *node = NULL;
     liteco_channel_t *const *eachor_channel;
-    if (__CURR_CO__ == NULL || machine == NULL) {
+    if (__CURR_CO__ == NULL || runtime == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
     for ( ;; ) {
@@ -99,44 +99,44 @@ int liteco_channel_recv(const void **const ele, const liteco_channel_t **const c
         // 并保证当前运行时等待通道的通知队列中唯一
         for (eachor_channel = channels; *eachor_channel != NULL; eachor_channel++) {
             pthread_mutex_lock(&(*eachor_channel)->lock);
-            liteco_channel_waiting_machine_join(&(*eachor_channel)->q_machines, machine);
+            liteco_channel_waiting_runtime_join(&(*eachor_channel)->q_runtimes, runtime);
             pthread_mutex_unlock(&(*eachor_channel)->lock);
         }
 
-        liteco_machine_wait(machine, __CURR_CO__, channels, timeout);
+        liteco_runtime_wait(runtime, __CURR_CO__, channels, timeout);
 
         for (eachor_channel = channels; *eachor_channel != NULL; eachor_channel++) {
             pthread_mutex_lock(&(*eachor_channel)->lock);
-            liteco_channel_remove_spec(&(*eachor_channel)->q_machines, machine);
+            liteco_channel_remove_spec(&(*eachor_channel)->q_runtimes, runtime);
             pthread_mutex_unlock(&(*eachor_channel)->lock);
         }
     }
 }
 
-int liteco_channel_waiting_machine_join(liteco_link_t *const link, liteco_machine_t *const machine) {
+int liteco_channel_waiting_runtime_join(liteco_link_t *const link, liteco_runtime_t *const runtime) {
     liteco_channel_link_node_t *node = NULL;
-    if (link == NULL || machine == NULL) {
+    if (link == NULL || runtime == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
     if ((node = liteco_malloc(sizeof(*node))) == NULL) {
         return LITECO_INTERNAL_ERROR;
     }
-    node->machine = machine;
+    node->runtime = runtime;
     liteco_link_push(link, &node->node);
 
     return LITECO_SUCCESS;
 }
 
-int liteco_channel_remove_spec(liteco_link_t *const link, liteco_machine_t *const machine) {
+int liteco_channel_remove_spec(liteco_link_t *const link, liteco_runtime_t *const runtime) {
     liteco_link_node_t *prev = NULL;
     liteco_link_node_t *node = NULL;
-    if (link == NULL || machine == NULL) {
+    if (link == NULL || runtime == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
     prev = &link->head;
     node = link->head.next;
     while (node != &link->head) {
-        if (liteco_container_of(liteco_channel_link_node_t, node, node)->machine == machine) {
+        if (liteco_container_of(liteco_channel_link_node_t, node, node)->runtime == runtime) {
             if (node == link->q_tail) {
                 link->q_tail = prev;
             }
@@ -165,8 +165,8 @@ int liteco_channel_send(liteco_channel_t *const channel, const void *const eleme
     ele_node->element = element;
     pthread_mutex_lock(&channel->lock);
     liteco_link_push(&channel->q_ele, &ele_node->node);
-    for (node = channel->q_machines.head.next; node != &channel->q_machines.head; node = node->next) {
-        if (liteco_machine_channel_notify(liteco_container_of(liteco_channel_link_node_t, node, node)->machine, channel) == LITECO_SUCCESS) {
+    for (node = channel->q_runtimes.head.next; node != &channel->q_runtimes.head; node = node->next) {
+        if (liteco_runtime_channel_notify(liteco_container_of(liteco_channel_link_node_t, node, node)->runtime, channel) == LITECO_SUCCESS) {
             break;
         }
     }
@@ -182,8 +182,8 @@ int liteco_channel_close(liteco_channel_t *const channel) {
     }
     pthread_mutex_lock(&channel->lock);
     channel->closed = LITECO_TRUE;
-    for (node = channel->q_machines.head.next; node != &channel->q_machines.head; node = node->next) {
-        while (liteco_machine_channel_notify(liteco_container_of(liteco_channel_link_node_t, node, node)->machine, channel) == LITECO_SUCCESS);
+    for (node = channel->q_runtimes.head.next; node != &channel->q_runtimes.head; node = node->next) {
+        while (liteco_runtime_channel_notify(liteco_container_of(liteco_channel_link_node_t, node, node)->runtime, channel) == LITECO_SUCCESS);
     }
     pthread_mutex_unlock(&channel->lock);
 

@@ -6,8 +6,8 @@
  *
  */
 
-#ifndef __LITECO_MACHINE_H__
-#define __LITECO_MACHINE_H__
+#ifndef __LITECO_RUNTIME_H__
+#define __LITECO_RUNTIME_H__
 
 #include "liteco.h"
 #include <sys/types.h>
