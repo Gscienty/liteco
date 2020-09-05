@@ -1,3 +1,28 @@
+/*
+ * Copyright (c) 2020 Gscienty <gaoxiaochuan@hotmail.com>
+ *
+ * Distributed under the MIT software license, see the accompanying
+ * file LICENSE or https://www.opensource.org/licenses/mit-license.php .
+ *
+ * 本文件功能说明：
+ *
+ * 本文件主要是对协程功能的实现
+ *
+ * 1. liteco_create
+ *      创建一个协程
+ * 2. liteco_resume
+ *      当前线程运行上下文切换为该协程
+ * 3. liteco_yield
+ *      将协程切出，将上下文切换回link的运行上下文中
+ * 4. liteco_internal_context_swap
+ *      切换上下文
+ * 5. liteco_internal_context_make
+ *      构造协程上下文
+ * 6. liteco_internal_atomic_cas
+ *      更新协程状态（compare and swap）
+ *
+ */
+
 #include "liteco.h"
 #include <stddef.h>
 #include <sys/types.h>
@@ -33,19 +58,8 @@ int liteco_create(liteco_coroutine_t *const co,
     return LITECO_SUCCESS;
 }
 
-int liteco_coroutine_set_status(liteco_coroutine_t *const co, int status) {
-    if (co == NULL) {
-        return LITECO_PARAMETER_UNEXCEPTION;
-    }
-    pthread_mutex_lock(&co->mutex);
-    co->status = status;
-    pthread_mutex_unlock(&co->mutex);
-
-    return LITECO_SUCCESS;
-}
-
 int liteco_resume(liteco_coroutine_t *const co) {
-    liteco_internal_context_t this_context;
+    __thread static liteco_internal_context_t this_context;
     if (co == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }

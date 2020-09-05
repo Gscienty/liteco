@@ -1,3 +1,24 @@
+/*
+ * Copyright (c) 2020 Gscienty <gaoxiaochuan@hotmail.com>
+ *
+ * Distributed under the MIT software license, see the accompanying
+ * file LICENSE or https://www.opensource.org/licenses/mit-license.php .
+ *
+ * 本文件功能说明：
+ *
+ * 链表实现
+ *
+ * 1. liteco_link_init
+ *      初始化链表
+ * 2. liteco_link_push
+ *      添加元素到链表末端
+ * 3. liteco_link_pop
+ *      删除链表头部的元素
+ * 4. liteco_link_empty
+ *      判断链表是否为空
+ *
+ */
+
 #include "liteco.h"
 
 int liteco_link_init(liteco_link_t *const link) {
