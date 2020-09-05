@@ -59,7 +59,7 @@ int liteco_create(liteco_coroutine_t *const co,
 }
 
 int liteco_resume(liteco_coroutine_t *const co) {
-    __thread static liteco_internal_context_t this_context;
+    static __thread liteco_internal_context_t this_context;
     if (co == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
