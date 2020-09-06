@@ -144,6 +144,7 @@ int liteco_wait_pop_spec(liteco_coroutine_t **const co, liteco_link_t *const q_w
     if (co == NULL || q_wait == NULL || channel == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
+
     *co = NULL;
     prev = &q_wait->head;
     node = q_wait->head.next;
@@ -248,6 +249,7 @@ int liteco_runtime_wait(liteco_runtime_t *const runtime, liteco_coroutine_t *con
 }
 
 int liteco_runtime_channel_notify(liteco_runtime_t *const runtime, liteco_channel_t *const channel) {
+    int result = LITECO_SUCCESS;
     liteco_coroutine_t *co = NULL;
     if (runtime == NULL || channel == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
@@ -260,10 +262,13 @@ int liteco_runtime_channel_notify(liteco_runtime_t *const runtime, liteco_channe
         co->active_channel = channel;
         liteco_ready_join(&runtime->q_ready, co);
     }
+    else {
+        result = LITECO_EMPTY;
+    }
     pthread_mutex_unlock(&runtime->lock);
     pthread_cond_signal(&runtime->cond);
 
-    return LITECO_SUCCESS;
+    return result;
 }
 
 static inline u_int64_t __now__() {
