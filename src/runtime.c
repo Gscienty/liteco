@@ -65,7 +65,6 @@ int liteco_timer_join(liteco_link_t *const q_timer, liteco_coroutine_t *const co
         liteco_link_push(q_timer, &timer_node->node);
     }
 
-
     return LITECO_SUCCESS;
 }
 
@@ -255,6 +254,8 @@ int liteco_runtime_channel_notify(liteco_runtime_t *const runtime, liteco_channe
         return LITECO_PARAMETER_UNEXCEPTION;
     }
     pthread_mutex_lock(&runtime->lock);
+
+    // 当 q_wait队列为空时，co设置为NULL
     liteco_wait_pop_spec(&co, &runtime->q_wait, channel);
     if (co != NULL) {
         liteco_timer_remove_spec(&runtime->q_timer, co);
