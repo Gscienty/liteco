@@ -25,6 +25,12 @@ int co2_fn(void *args) {
     printf("co2 ->\n");
     liteco_resume(&co3);
     liteco_resume(&co4);
+    liteco_resume(&co3);
+    liteco_resume(&co3);
+    liteco_resume(&co3);
+    liteco_resume(&co3);
+    liteco_resume(&co3);
+    liteco_resume(&co3);
     printf("co2 <-\n");
 
     return 0;
@@ -33,7 +39,11 @@ int co2_fn(void *args) {
 int co3_fn(void *args) {
     (void) args;
 
-    printf("co3\n");
+    printf("co3 1\n");
+    liteco_yield();
+    printf("co3 2\n");
+    liteco_yield();
+    printf("co3 3\n");
 
     return 0;
 }

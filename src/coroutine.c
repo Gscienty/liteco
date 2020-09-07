@@ -60,17 +60,21 @@ int liteco_create(liteco_coroutine_t *const co,
 
 int liteco_resume(liteco_coroutine_t *const co) {
     liteco_coroutine_t *remember_current_co = NULL;
-    liteco_internal_context_t this_context;
+    static __thread liteco_internal_context_t thread_context;
     if (co == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
+    if (co->status == LITECO_TERMINATE) {
+        return LITECO_CLOSED;
+    }
+    remember_current_co = __CURR_CO__;
+
     pthread_mutex_lock(&co->mutex);
-    *co->link = &this_context;
+    *co->link = remember_current_co == NULL ? &thread_context : &remember_current_co->context;
     pthread_mutex_unlock(&co->mutex);
 
-    remember_current_co = __CURR_CO__;
     __CURR_CO__ = co;
-    liteco_internal_context_swap(&this_context, &co->context);
+    liteco_internal_context_swap(*co->link, &co->context);
     __CURR_CO__ = remember_current_co;
 
     return LITECO_SUCCESS;
