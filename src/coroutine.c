@@ -24,6 +24,7 @@
  */
 
 #include "liteco.h"
+#include "internal/couroutine.h"
 #include <stddef.h>
 #include <sys/types.h>
 #include <sys/time.h>
@@ -64,29 +65,49 @@ int liteco_resume(liteco_coroutine_t *const co) {
     if (co == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
+    pthread_mutex_lock(&co->mutex);
     if (co->status == LITECO_TERMINATE) {
-        return LITECO_CLOSED;
+        pthread_mutex_unlock(&co->mutex);
+        return LITECO_TERMINATE;
     }
+    if (co->status == LITECO_STARTING) {
+        co->status = LITECO_READYING;
+    }
+
     remember_current_co = __CURR_CO__;
 
-    pthread_mutex_lock(&co->mutex);
     *co->link = remember_current_co == NULL ? &thread_context : &remember_current_co->context;
     pthread_mutex_unlock(&co->mutex);
 
     __CURR_CO__ = co;
+    liteco_status_cas(co, LITECO_READYING, LITECO_RUNNING);
+
     liteco_internal_context_swap(*co->link, &co->context);
+
     __CURR_CO__ = remember_current_co;
 
-    return LITECO_SUCCESS;
+    if (co->status == LITECO_TERMINATE) {
+        if (co->finished_fn != NULL) {
+            co->finished_fn(co);
+        }
+        return LITECO_TERMINATE;
+    }
+
+    return co->status;
 }
 
 int liteco_yield() {
     liteco_coroutine_t *co = __CURR_CO__;
-    if (__CURR_CO__ == NULL) {
+    if (co == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
+    }
+
+    if (co->status == LITECO_RUNNING) {
+        co->status = LITECO_READYING;
     }
     __CURR_CO__ = NULL;
     liteco_internal_context_swap(&co->context, *co->link);
+
     return LITECO_SUCCESS;
 }
 
@@ -96,10 +117,7 @@ static int liteco_callback(void *const co_) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
     co->result = co->fn(co->args);
-    pthread_mutex_lock(&co->mutex);
-    co->status = LITECO_TERMINATE;
-    pthread_mutex_unlock(&co->mutex);
-
+    liteco_status_cas(co, LITECO_RUNNING, LITECO_TERMINATE);
     return liteco_yield();
 }
 

@@ -38,6 +38,10 @@ int liteco_timer_join(liteco_link_t *const q_timer, liteco_coroutine_t *const co
     if (q_timer == NULL || co == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
+    if (co->status == LITECO_TERMINATE) {
+        return LITECO_CLOSED;
+    }
+
     liteco_timer_remove_spec(q_timer, co);
 
     if ((timer_node = liteco_malloc(sizeof(*timer_node))) == NULL) {
@@ -281,6 +285,7 @@ static inline u_int64_t __now__() {
 int liteco_runtime_schedule(liteco_runtime_t *const runtime) {
     u_int64_t timeout = 0;
     liteco_coroutine_t *co = NULL;
+    int co_status = LITECO_UNKNOW;
     if (runtime == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
@@ -317,15 +322,10 @@ int liteco_runtime_schedule(liteco_runtime_t *const runtime) {
     pthread_mutex_unlock(&runtime->lock);
 
     liteco_status_cas(co, LITECO_READYING, LITECO_RUNNING);
-    liteco_resume(co);
 
-    if (co->status == LITECO_TERMINATE) {
-        if (co->finished_fn != NULL) {
-            co->finished_fn(co);
-        }
-    }
-    else if (co->status == LITECO_RUNNING) {
-        liteco_status_cas(co, LITECO_RUNNING, LITECO_READYING);
+    co_status = liteco_resume(co);
+
+    if (co_status == LITECO_READYING) {
         liteco_ready_join(&runtime->q_ready, co);
     }
 
