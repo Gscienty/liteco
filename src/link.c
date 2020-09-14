@@ -61,9 +61,9 @@ int liteco_link_pop(liteco_link_node_t **const node, liteco_link_t *const link) 
     return LITECO_SUCCESS;
 }
 
-liteco_boolean_t liteco_link_empty(liteco_link_t *const link) {
+bool liteco_link_empty(liteco_link_t *const link) {
     if (link == NULL) {
-        return LITECO_TRUE;
+        return true;
     }
     
     return &link->head == link->q_tail;

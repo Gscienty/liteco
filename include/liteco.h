@@ -18,6 +18,7 @@
 #include <stddef.h>
 #include <pthread.h>
 #include <sys/types.h>
+#include <stdbool.h>
 
 /*
  * 协程的上下文，用于暂存各种CPU寄存器的内容。
@@ -242,6 +243,50 @@ int liteco_runtime_join(liteco_runtime_t *const runtime, liteco_coroutine_t *con
  *      LITECO_PARAMETER_UNEXCEPTION 参数错误
  */
 int liteco_runtime_delay_join(liteco_runtime_t *const runtime, const u_int64_t timeout, liteco_coroutine_t *const co);
+
+/*
+ * 判别当前运行时就绪队列是否为空
+ *
+ * @param runtime: 运行时
+ *
+ * @return:
+ *      true: 就绪队列为空
+ *      false: 就绪队列不为空
+ */
+bool liteco_runtime_ready_empty(liteco_runtime_t *const runtime);
+
+/*
+ * 判别当前运行时等待队列是否为空
+ *
+ * @param runtime: 运行时
+ *
+ * @return:
+ *      true: 等待队列为空
+ *      false: 等待队列不为空
+ */
+bool liteco_runtime_wait_empty(liteco_runtime_t *const runtime);
+
+/*
+ * 判别当前运行时等待时钟队列是否为空
+ *
+ * @param runtime: 运行时
+ *
+ * @return:
+ *      true: 等待时钟队列为空
+ *      false: 等待时钟队列不为空
+ */
+bool liteco_runtime_timer_empty(liteco_runtime_t *const runtime);
+
+/*
+ * 判别当前运行时中就绪队列、等待队列和等待时钟队列是否均为空
+ *
+ * @param runtime: 运行时
+ *
+ * @return:
+ *      true: 各队列均为空
+ *      false: 存在不为空的队列
+ */
+bool liteco_runtime_empty(liteco_runtime_t *const runtime);
 
 // 等待通道
 struct liteco_channel_s {

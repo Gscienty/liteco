@@ -360,3 +360,33 @@ int liteco_runtime_delay_join(liteco_runtime_t *const runtime, const u_int64_t t
 
     return LITECO_SUCCESS;
 }
+
+bool liteco_runtime_ready_empty(liteco_runtime_t *const runtime) {
+    if (runtime == NULL) {
+        return true;
+    }
+
+    return liteco_link_empty(&runtime->q_ready);
+}
+
+bool liteco_runtime_wait_empty(liteco_runtime_t *const runtime) {
+    if (runtime == NULL) {
+        return true;
+    }
+
+    return liteco_link_empty(&runtime->q_wait);
+}
+
+bool liteco_runtime_timer_empty(liteco_runtime_t *const runtime) {
+    if (runtime == NULL) {
+        return true;
+    }
+
+    return liteco_link_empty(&runtime->q_timer);
+}
+
+bool liteco_runtime_empty(liteco_runtime_t *const runtime) {
+    return liteco_runtime_ready_empty(runtime)
+        && liteco_runtime_wait_empty(runtime)
+        && liteco_runtime_timer_empty(runtime);
+}
