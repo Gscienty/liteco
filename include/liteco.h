@@ -336,6 +336,9 @@ int liteco_channel_init(liteco_channel_t *const channel);
  */
 int liteco_channel_send(liteco_channel_t *const channel, const void *const element);
 
+#define liteco_channel_notify(channel)          \
+    liteco_channel_send((channel), (channel))
+
 /*
  * 等待一个消息事件
  *
