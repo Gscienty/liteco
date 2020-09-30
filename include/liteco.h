@@ -95,6 +95,7 @@ struct liteco_coroutine_s {
 #define LITECO_EMPTY                    -4
 #define LITECO_CLOSED                   -5
 #define LITECO_TIMEOUT                  -6
+#define LITECO_NOT_FOUND                -6
 #define LITECO_SUCCESS                  0
 
 #define LITECO_UNKNOW       0x00
@@ -220,6 +221,17 @@ int liteco_runtime_channel_notify(liteco_runtime_t *const runtime, liteco_channe
 int liteco_runtime_schedule(liteco_runtime_t *const runtime);
 
 /*
+ * 运行时调度运行特定一个在就绪队列中的协程
+ *
+ * @param runtime: 运行时
+ *
+ * @return:
+ *      LITECO_SUCCESS 调配成功
+ *      LITECO_PARAMETER_UNEXCEPTION 参数错误
+ */
+int liteco_runtime_execute(liteco_runtime_t *const runtime, liteco_coroutine_t *const co);
+
+/*
  * 将协程加入到运行时的就绪队列中
  *
  * @param runtime: 运行时
@@ -341,6 +353,11 @@ int liteco_channel_send(liteco_channel_t *const channel, const void *const eleme
  */
 int liteco_channel_recv(const void **const ele, const liteco_channel_t **const channel,
                         liteco_runtime_t *const runtime, liteco_channel_t *const channels[], const u_int64_t timeout);
+
+#define liteco_recv(ele, channel, runtime, timeout, ...) {                      \
+    liteco_channel_t *__channels[] = { __VA_ARGS__, NULL };                     \
+    liteco_channel_recv((ele), (channel), (runtime), __channels, (timeout));    \
+}
 
 /*
  * 关闭等待通道

@@ -122,6 +122,46 @@ int liteco_timer_remove_spec(liteco_link_t *const q_timer, liteco_coroutine_t *c
     return LITECO_SUCCESS;
 }
 
+bool liteco_timer_exist(liteco_link_t *const q_timer, liteco_coroutine_t *const co) {
+    liteco_link_node_t *prev = NULL;
+    liteco_link_node_t *node = NULL;
+    if (q_timer == NULL || co == NULL) {
+        return false;
+    }
+
+    prev = &q_timer->head;
+    node = q_timer->head.next;
+    while (node != &q_timer->head) {
+        if (liteco_container_of(liteco_timer_coroutine_t, node, node)->co == co) {
+            return true;
+        }
+        prev = node;
+        node = node->next;
+    }
+
+    return false;
+}
+
+u_int64_t liteco_timer_spec(liteco_link_t *const q_timer, liteco_coroutine_t *const co) {
+    liteco_link_node_t *prev = NULL;
+    liteco_link_node_t *node = NULL;
+    if (q_timer == NULL || co == NULL) {
+        return 0;
+    }
+
+    prev = &q_timer->head;
+    node = q_timer->head.next;
+    while (node != &q_timer->head) {
+        if (liteco_container_of(liteco_timer_coroutine_t, node, node)->co == co) {
+            return liteco_container_of(liteco_timer_coroutine_t, node, node)->timeout;
+        }
+        prev = node;
+        node = node->next;
+    }
+
+    return 0;
+}
+
 int liteco_wait_join(liteco_link_t *const q_wait, liteco_coroutine_t *const co, liteco_channel_t *const channels[]) {
     liteco_wait_coroutine_t *node = NULL;
     if (q_wait == NULL || co == NULL || channels == NULL) {
@@ -230,6 +270,29 @@ int liteco_ready_pop(liteco_coroutine_t **const co, liteco_link_t *const q_ready
     return LITECO_SUCCESS;
 }
 
+int liteco_ready_pop_spec(liteco_link_t *const q_ready, liteco_coroutine_t *const co) {
+    liteco_link_node_t *prev = NULL;
+    liteco_link_node_t *node = NULL;
+    if (q_ready == NULL || co == NULL) {
+        return LITECO_PARAMETER_UNEXCEPTION;
+    }
+
+    prev = &q_ready->head;
+    node = q_ready->head.next;
+    while (node != &q_ready->head) {
+        if (co == liteco_container_of(liteco_ready_coroutine_t, node, node)->co) {
+            if (node == q_ready->q_tail) {
+                q_ready->q_tail = prev;
+            }
+            prev->next = node->next;
+
+            liteco_free(liteco_container_of(liteco_ready_coroutine_t, node, node));
+        }
+    }
+
+    return LITECO_NOT_FOUND;
+}
+
 int liteco_runtime_wait(liteco_runtime_t *const runtime, liteco_coroutine_t *const co, liteco_channel_t *const channels[], const u_int64_t timeout) {
     if (runtime == NULL || co == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
@@ -322,11 +385,54 @@ int liteco_runtime_schedule(liteco_runtime_t *const runtime) {
     pthread_mutex_unlock(&runtime->lock);
 
     liteco_status_cas(co, LITECO_READYING, LITECO_RUNNING);
-
     co_status = liteco_resume(co);
 
     if (co_status == LITECO_READYING) {
+        pthread_mutex_lock(&runtime->lock);
         liteco_ready_join(&runtime->q_ready, co);
+        pthread_mutex_unlock(&runtime->lock);
+    }
+
+    return LITECO_SUCCESS;
+}
+
+int liteco_runtime_execute(liteco_runtime_t *const runtime, liteco_coroutine_t *const co) {
+    int co_status = LITECO_UNKNOW;
+    if (runtime == NULL || co == NULL) {
+        return LITECO_PARAMETER_UNEXCEPTION;
+    }
+
+    pthread_mutex_lock(&runtime->lock);
+    for ( ;; ) {
+        if (liteco_ready_pop_spec(&runtime->q_ready, co) == LITECO_SUCCESS) {
+            break;
+        }
+        else if (liteco_timer_exist(&runtime->q_timer, co)) {
+            u_int64_t timeout = liteco_timer_spec(&runtime->q_timer, co);
+            if (timeout < __now__()) {
+                liteco_wait_remove_spec(&runtime->q_timer, co);
+            }
+            else {
+                struct timespec spec = { timeout / (1000 * 1000), timeout % (1000 * 1000) * 1000 };
+                pthread_cond_timedwait(&runtime->cond, &runtime->lock, &spec);
+
+                liteco_status_cas(co, LITECO_WAITING, LITECO_READYING);
+                liteco_ready_join(&runtime->q_ready, co);
+            }
+        }
+        else {
+            pthread_cond_wait(&runtime->cond, &runtime->lock);
+        }
+    }
+    pthread_mutex_unlock(&runtime->lock);
+
+    liteco_status_cas(co, LITECO_READYING, LITECO_RUNNING);
+    co_status = liteco_resume(co);
+
+    if (co_status == LITECO_READYING) {
+        pthread_mutex_lock(&runtime->lock);
+        liteco_ready_join(&runtime->q_ready, co);
+        pthread_mutex_unlock(&runtime->lock);
     }
 
     return LITECO_SUCCESS;
