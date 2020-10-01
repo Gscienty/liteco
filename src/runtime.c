@@ -287,7 +287,11 @@ int liteco_ready_pop_spec(liteco_link_t *const q_ready, liteco_coroutine_t *cons
             prev->next = node->next;
 
             liteco_free(liteco_container_of(liteco_ready_coroutine_t, node, node));
+            return LITECO_SUCCESS;
         }
+
+        prev = node;
+        node = node->next;
     }
 
     return LITECO_NOT_FOUND;
