@@ -125,6 +125,7 @@ int liteco_timer_remove_spec(liteco_link_t *const q_timer, liteco_coroutine_t *c
 bool liteco_timer_exist(liteco_link_t *const q_timer, liteco_coroutine_t *const co) {
     liteco_link_node_t *prev = NULL;
     liteco_link_node_t *node = NULL;
+
     if (q_timer == NULL || co == NULL) {
         return false;
     }
@@ -244,6 +245,14 @@ int liteco_ready_join(liteco_link_t *const q_ready, liteco_coroutine_t *const co
     if (q_ready == NULL || co == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
+    liteco_link_node_t *exist_looper = q_ready->head.next;
+    while (exist_looper != &q_ready->head) {
+        if (co == liteco_container_of(liteco_ready_coroutine_t, node, exist_looper)->co) {
+            return LITECO_SUCCESS;
+        }
+        exist_looper = exist_looper->next;
+    }
+
     if ((node = liteco_malloc(sizeof(*node))) == NULL) {
         return LITECO_INTERNAL_ERROR;
     }
@@ -281,10 +290,10 @@ int liteco_ready_pop_spec(liteco_link_t *const q_ready, liteco_coroutine_t *cons
     node = q_ready->head.next;
     while (node != &q_ready->head) {
         if (co == liteco_container_of(liteco_ready_coroutine_t, node, node)->co) {
+            prev->next = node->next;
             if (node == q_ready->q_tail) {
                 q_ready->q_tail = prev;
             }
-            prev->next = node->next;
 
             liteco_free(liteco_container_of(liteco_ready_coroutine_t, node, node));
             return LITECO_SUCCESS;
