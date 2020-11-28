@@ -108,6 +108,8 @@ struct liteco_coroutine_s {
 #define LITECO_TRUE     1
 #define LITECO_FALSE    0
 
+#define LITECO_TIMEOUT_MAX (1000)
+
 #define liteco_container_of(t, m, p) ((t *) ((char *) (p) - ((size_t) &(((t *) 0)->m))))
 
 /*

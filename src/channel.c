@@ -55,8 +55,11 @@ static inline u_int64_t __now__() {
 int liteco_channel_recv(const void **const ele, const liteco_channel_t **const channel,
                         liteco_runtime_t *const runtime, liteco_channel_t *const channels[], const u_int64_t timeout) {
 
+    bool finished = false;
+    int result = LITECO_SUCCESS;
     liteco_link_node_t *node = NULL;
     liteco_channel_t *const *eachor_channel;
+
     if (__CURR_CO__ == NULL || runtime == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
     }
@@ -66,6 +69,7 @@ int liteco_channel_recv(const void **const ele, const liteco_channel_t **const c
             return LITECO_TIMEOUT;
         }
 
+        finished = false;
         for (eachor_channel = channels; *eachor_channel != NULL; eachor_channel++) {
             pthread_mutex_lock(&(*eachor_channel)->lock);
             // 当发现有等待队列已经关闭时，发回LITECO_CLOSED
@@ -73,8 +77,11 @@ int liteco_channel_recv(const void **const ele, const liteco_channel_t **const c
                 if (channel != NULL) {
                     *channel = *eachor_channel;
                 }
+
                 pthread_mutex_unlock(&(*eachor_channel)->lock);
-                return LITECO_CLOSED;
+                finished = true;
+                result = LITECO_CLOSED;
+                break;
             }
 
             // 当等待队列中的消息事件不为空时，获取消息事件队列中的队首事件，并返回LITECO_SUCCESS
@@ -89,26 +96,35 @@ int liteco_channel_recv(const void **const ele, const liteco_channel_t **const c
                 liteco_free(liteco_container_of(liteco_channel_element_link_node_t, node, node));
 
                 pthread_mutex_unlock(&(*eachor_channel)->lock);
-                return LITECO_SUCCESS;
+                finished = true;
+                result = LITECO_SUCCESS;
+                break;
             }
-            pthread_mutex_unlock(&(*eachor_channel)->lock);
-        }
 
-        // 如果判断需要等待消息事件时
-        // 将当前协程添加到当前的运行时中，并将运行时添加到每个等待通道的通知队列中
-        // 并保证当前运行时等待通道的通知队列中唯一
-        for (eachor_channel = channels; *eachor_channel != NULL; eachor_channel++) {
-            pthread_mutex_lock(&(*eachor_channel)->lock);
+            // 如果判断需要等待消息事件时
+            // 将当前协程添加到当前的运行时中，并将运行时添加到每个等待通道的通知队列中
+            // 并保证当前运行时等待通道的通知队列中唯一
             liteco_channel_waiting_runtime_join(&(*eachor_channel)->q_runtimes, runtime);
             pthread_mutex_unlock(&(*eachor_channel)->lock);
         }
 
-        liteco_runtime_wait(runtime, __CURR_CO__, channels, timeout);
+        u_int64_t now = __now__();
+        if (!finished && (timeout == 0 || timeout > now)) {
+            u_int64_t ensure_timeout = __now__() + LITECO_TIMEOUT_MAX;
+            if (timeout != 0 && timeout < ensure_timeout) {
+                ensure_timeout = timeout;
+            }
+            liteco_runtime_wait(runtime, __CURR_CO__, channels, ensure_timeout);
+        }
 
         for (eachor_channel = channels; *eachor_channel != NULL; eachor_channel++) {
             pthread_mutex_lock(&(*eachor_channel)->lock);
             liteco_channel_remove_spec(&(*eachor_channel)->q_runtimes, runtime);
             pthread_mutex_unlock(&(*eachor_channel)->lock);
+        }
+
+        if (finished) {
+            return result;
         }
     }
 }

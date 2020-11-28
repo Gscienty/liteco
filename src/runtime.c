@@ -324,6 +324,7 @@ int liteco_runtime_wait(liteco_runtime_t *const runtime, liteco_coroutine_t *con
     liteco_status_cas(co, LITECO_RUNNING, LITECO_WAITING);
     pthread_cond_signal(&runtime->cond);
     liteco_yield();
+
     return LITECO_SUCCESS;
 }
 
@@ -424,14 +425,12 @@ int liteco_runtime_execute(liteco_runtime_t *const runtime, liteco_coroutine_t *
             u_int64_t timeout = liteco_timer_spec(&runtime->q_timer, co);
             if (timeout < __now__()) {
                 liteco_wait_remove_spec(&runtime->q_timer, co);
+                liteco_status_cas(co, LITECO_WAITING, LITECO_READYING);
                 break;
             }
             else {
                 struct timespec spec = { timeout / (1000 * 1000), timeout % (1000 * 1000) * 1000 };
                 pthread_cond_timedwait(&runtime->cond, &runtime->lock, &spec);
-
-                liteco_status_cas(co, LITECO_WAITING, LITECO_READYING);
-                liteco_ready_join(&runtime->q_ready, co);
             }
         }
         else {
