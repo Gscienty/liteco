@@ -28,12 +28,13 @@
 #include <stddef.h>
 #include <sys/types.h>
 #include <sys/time.h>
+#include <string.h>
 
 __thread liteco_coroutine_t *__CURR_CO__ = NULL;
 
 static int liteco_callback(void *const);
 
-extern int liteco_internal_context_swap(liteco_internal_context_t *const from, liteco_internal_context_t *const to);
+extern int liteco_internal_context_swap(liteco_internal_context_t const from, liteco_internal_context_t const to);
 extern int liteco_internal_context_make(liteco_internal_context_t *const ctx, void *stack, size_t st_size, int (*fn) (void *const), void *const args);
 extern int liteco_internal_atomic_cas(int *const ptr, const int old, const int nex);
 extern int liteco_internal_p_yield(const int n);
@@ -47,13 +48,12 @@ int liteco_create(liteco_coroutine_t *const co,
     co->fn = fn;
     co->args = args;
     co->status = LITECO_STARTING;
-    co->link = (liteco_internal_context_t **) ((((unsigned long) (stack + st_size) - 8) & 0xfffffffffffffff0));
     co->finished_fn = finished_fn;
     co->st_size = st_size;
     co->stack = stack;
+    memset(co->context, 0, sizeof(co->context));
     pthread_mutex_init(&co->mutex, NULL);
     liteco_internal_context_make(&co->context, stack, st_size, liteco_callback, co);
-    *co->link = NULL;
     co->result = 0;
 
     return LITECO_SUCCESS;
@@ -76,13 +76,13 @@ int liteco_resume(liteco_coroutine_t *const co) {
 
     remember_current_co = __CURR_CO__;
 
-    *co->link = remember_current_co == NULL ? &thread_context : &remember_current_co->context;
+    co->link = remember_current_co == NULL ? &thread_context : &remember_current_co->context;
     pthread_mutex_unlock(&co->mutex);
 
     __CURR_CO__ = co;
     liteco_status_cas(co, LITECO_READYING, LITECO_RUNNING);
 
-    liteco_internal_context_swap(*co->link, &co->context);
+    liteco_internal_context_swap(*co->link, co->context);
 
     __CURR_CO__ = remember_current_co;
 
@@ -106,7 +106,7 @@ int liteco_yield() {
         co->status = LITECO_READYING;
     }
     __CURR_CO__ = NULL;
-    liteco_internal_context_swap(&co->context, *co->link);
+    liteco_internal_context_swap(co->context, *co->link);
 
     return LITECO_SUCCESS;
 }

@@ -61,7 +61,7 @@ struct liteco_coroutine_s {
     // 协程状态
     int status;
     // 关联协程
-    liteco_internal_context_t **link;
+    liteco_internal_context_t *link;
 
     // 协程起始函数
     int (*fn) (void *const);
@@ -109,6 +109,8 @@ struct liteco_coroutine_s {
 #define LITECO_FALSE    0
 
 #define LITECO_TIMEOUT_MAX (1000)
+
+#define LITECO_DEFAULT_STACK_SIZE (8192)
 
 #define liteco_container_of(t, m, p) ((t *) ((char *) (p) - ((size_t) &(((t *) 0)->m))))
 

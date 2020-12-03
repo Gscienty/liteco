@@ -15,9 +15,7 @@ __make_context:
                                         ; /* 对齐栈顶指针 */
     subq $8, %rax                       ;
     andq $0xfffffffffffffff0, %rax      ;
-    subq $8, %rax                       ;
 
-    addq $8, %rax
     movq %rax, 96(%rdi)                 ; /* 将该上下文的基址地址存储到context的RBX的位置 */
     subq $8, %rax
     movq %rax, 128(%rdi)                ; /* 将该上下文的栈顶指针存储到context的RSP的位置 */
@@ -27,6 +25,7 @@ __make_context:
                                         ; /* SP(0): stored __end_context, RBX(8) stored context */
 
     movq %r8, 72(%rdi)                  ; /* 将arg存入context中的RDI的位置 */
+    movq $0, 80(%rdi)                   ; /* 初始化arg2 (空) */
 
     xorl %eax, %eax
     ret
