@@ -108,7 +108,7 @@ struct liteco_coroutine_s {
 #define LITECO_TRUE     1
 #define LITECO_FALSE    0
 
-#define LITECO_TIMEOUT_MAX (1000)
+#define LITECO_TIMEOUT_MAX (1 << 20)
 
 #define LITECO_DEFAULT_STACK_SIZE (8192)
 
