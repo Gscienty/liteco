@@ -89,14 +89,15 @@ struct liteco_coroutine_s {
     liteco_channel_t *active_channel;
 };
 
-#define LITECO_PARAMETER_UNEXCEPTION    -1
-#define LITECO_COROUTINE_JOINED         -2
-#define LITECO_INTERNAL_ERROR           -3
-#define LITECO_EMPTY                    -4
-#define LITECO_CLOSED                   -5
-#define LITECO_TIMEOUT                  -6
-#define LITECO_NOT_FOUND                -6
-#define LITECO_SUCCESS                  0
+#define LITECO_PARAMETER_UNEXCEPTION -1
+#define LITECO_COROUTINE_JOINED      -2
+#define LITECO_INTERNAL_ERROR        -3
+#define LITECO_EMPTY                 -4
+#define LITECO_CLOSED                -5
+#define LITECO_TIMEOUT               -6
+#define LITECO_NOT_FOUND             -7
+#define LITECO_BLOCKED               -8
+#define LITECO_SUCCESS               0
 
 #define LITECO_UNKNOW       0x00
 #define LITECO_STARTING     0x01
@@ -216,24 +217,29 @@ int liteco_runtime_channel_notify(liteco_runtime_t *const runtime, liteco_channe
 /*
  * 运行时调度运行一个协程
  *
+ * @param waiting: 等待超时时间, 当设置为NULL时该函数将被阻塞；
+ *      否则将返回LITECO_SUCCESS，并将*waiting设置为等待的毫秒数，若为0时即永久等待。
  * @param runtime: 运行时
  *
  * @return:
  *      LITECO_SUCCESS 调配成功
  *      LITECO_PARAMETER_UNEXCEPTION 参数错误
  */
-int liteco_runtime_schedule(liteco_runtime_t *const runtime);
+int liteco_runtime_schedule(u_int64_t *const waiting, liteco_runtime_t *const runtime);
 
 /*
  * 运行时调度运行特定一个在就绪队列中的协程
  *
+ * @param waiting: 等待超时时间, 当设置为NULL时该函数将被阻塞；
+ *      否则将返回LITECO_SUCCESS，并将*waiting设置为等待的毫秒数，若为0时即永久等待。
  * @param runtime: 运行时
+ * @param co: 协程
  *
  * @return:
  *      LITECO_SUCCESS 调配成功
  *      LITECO_PARAMETER_UNEXCEPTION 参数错误
  */
-int liteco_runtime_execute(liteco_runtime_t *const runtime, liteco_coroutine_t *const co);
+int liteco_runtime_execute(u_int64_t *const waiting, liteco_runtime_t *const runtime, liteco_coroutine_t *const co);
 
 /*
  * 将协程加入到运行时的就绪队列中

@@ -359,7 +359,7 @@ static inline u_int64_t __now__() {
     return tv.tv_sec * 1000 * 1000 + tv.tv_usec;
 }
 
-int liteco_runtime_schedule(liteco_runtime_t *const runtime) {
+int liteco_runtime_schedule(u_int64_t *const waiting, liteco_runtime_t *const runtime) {
     u_int64_t timeout = 0;
     liteco_coroutine_t *co = NULL;
     int co_status = LITECO_UNKNOW;
@@ -378,16 +378,29 @@ int liteco_runtime_schedule(liteco_runtime_t *const runtime) {
     co = NULL;
     while (liteco_link_empty(&runtime->q_ready)) {
         if (liteco_link_empty(&runtime->q_timer)) {
-            pthread_cond_wait(&runtime->cond, &runtime->lock);
+            if (waiting) {
+                *waiting = 0;
+                pthread_mutex_unlock(&runtime->lock);
+                return LITECO_BLOCKED;
+            }
+            else {
+                pthread_cond_wait(&runtime->cond, &runtime->lock);
+            }
         }
         else {
             timeout = liteco_timer_last(&runtime->q_timer);
-            if (timeout < __now__()) {
+            u_int64_t now = __now__();
+            if (timeout < now) {
                 liteco_timer_pop(&co, &runtime->q_timer);
                 liteco_wait_remove_spec(&runtime->q_wait, co);
 
                 liteco_status_cas(co, LITECO_WAITING, LITECO_READYING);
                 liteco_ready_join(&runtime->q_ready, co);
+            }
+            else if (waiting) {
+                *waiting = timeout < now ? 0 : timeout - now;
+                pthread_mutex_unlock(&runtime->lock);
+                return LITECO_BLOCKED;
             }
             else {
                 struct timespec spec = { timeout / (1000 * 1000), timeout % (1000 * 1000) * 1000 };
@@ -410,7 +423,7 @@ int liteco_runtime_schedule(liteco_runtime_t *const runtime) {
     return LITECO_SUCCESS;
 }
 
-int liteco_runtime_execute(liteco_runtime_t *const runtime, liteco_coroutine_t *const co) {
+int liteco_runtime_execute(u_int64_t *const waiting, liteco_runtime_t *const runtime, liteco_coroutine_t *const co) {
     int co_status = LITECO_UNKNOW;
     if (runtime == NULL || co == NULL) {
         return LITECO_PARAMETER_UNEXCEPTION;
@@ -418,15 +431,22 @@ int liteco_runtime_execute(liteco_runtime_t *const runtime, liteco_coroutine_t *
 
     pthread_mutex_lock(&runtime->lock);
     for ( ;; ) {
+        u_int64_t now = __now__();
         if (liteco_ready_pop_spec(&runtime->q_ready, co) == LITECO_SUCCESS) {
             break;
         }
         else if (liteco_timer_exist(&runtime->q_timer, co)) {
             u_int64_t timeout = liteco_timer_spec(&runtime->q_timer, co);
-            if (timeout < __now__()) {
+            if (timeout < now) {
                 liteco_wait_remove_spec(&runtime->q_timer, co);
                 liteco_status_cas(co, LITECO_WAITING, LITECO_READYING);
                 break;
+            }
+
+            if (waiting) {
+                *waiting = timeout < now ? 0 : timeout - now;
+                pthread_mutex_unlock(&runtime->lock);
+                return LITECO_BLOCKED;
             }
             else {
                 struct timespec spec = { timeout / (1000 * 1000), timeout % (1000 * 1000) * 1000 };
@@ -434,7 +454,14 @@ int liteco_runtime_execute(liteco_runtime_t *const runtime, liteco_coroutine_t *
             }
         }
         else {
-            pthread_cond_wait(&runtime->cond, &runtime->lock);
+            if (waiting) {
+                *waiting = 0;
+                pthread_mutex_unlock(&runtime->lock);
+                return LITECO_BLOCKED;
+            }
+            else {
+                pthread_cond_wait(&runtime->cond, &runtime->lock);
+            }
         }
     }
     pthread_mutex_unlock(&runtime->lock);
